@@ -2,13 +2,93 @@
 #include <random>
 #include <SDL.h>
 
-#define CONST_FRAME_DELAY 16.67
-#define RECT_MIN_WIDTH_HEIGHT 5
-#define RECT_MAX_WIDTH_HEIGHT 250
+#define CONST_FRAME_DELAY 6.944
 
-int Clamp(int value, int low, int high)
+#define RECT_MIN_WIDTH_HEIGHT 5
+#define RECT_MAX_WIDTH_HEIGHT 50
+#define RECT_MIN_X 0
+#define RECT_MAX_X 640
+#define RECT_Y -10
+
+#define G 9.81
+#define GRAVITY_SCALE 0.5
+
+class Position
 {
-	return std::max(low, std::min(value, high));
+private:
+	float x;
+	float y;
+
+public:
+	Position(float xPos, float yPos)
+	{
+		x = xPos;
+		y = yPos;
+	}
+
+	Position()
+	{
+		x = 0.f;
+		y = 0.f;
+	}
+
+	float GetX() const { return x; }
+	float GetY() const { return y; }
+
+	void SetX(float newX)
+	{
+		x = newX;
+	}
+	void SetY(float newY)
+	{
+		y = newY;
+	}
+};
+
+class Object
+{
+private:
+	Position pos;
+	SDL_Rect r;
+
+	void SetPos(float x, float y)
+	{
+		// Update virtual coordinates
+		pos.SetX(x);
+		pos.SetY(y);
+
+		// Update rect coordinates
+		r.x = pos.GetX();
+		r.y = pos.GetY();
+	}
+	void SetDimensions(float w, float h)
+	{
+		r.w = w;
+		r.h = h;
+	}
+
+public:
+	Object(SDL_Rect rect, Position p)
+	{
+		r = rect;
+		pos = p;
+		
+		SetPos(p.GetX(), p.GetY());
+	}
+
+	Position GetPos() { return pos; }
+	SDL_Rect GetRect() { return r; }
+
+	void UpdatePos(float newX, float newY)
+	{
+		SetPos(newX, newY);
+	}
+};
+
+
+void UpdateObjects(Object* object)
+{
+	object->UpdatePos(object->GetPos().GetX(), object->GetPos().GetY() + (G*GRAVITY_SCALE));
 }
 
 int main(int argc, char * argv[])
@@ -25,7 +105,7 @@ int main(int argc, char * argv[])
 
 	// Create window
 	SDL_Window* pWindow = NULL;
-	pWindow = SDL_CreateWindow("Garbanzo-physics demo",
+	pWindow = SDL_CreateWindow("Garbanzo physics demo",
 								SDL_WINDOWPOS_UNDEFINED,
 								SDL_WINDOWPOS_UNDEFINED,
 								800, 600,
@@ -37,20 +117,24 @@ int main(int argc, char * argv[])
 									-1,	
 									SDL_RENDERER_ACCELERATED);
 
-	// Set background color 
-	SDL_SetRenderDrawColor(pRenderer, 0, 0, 0, 255);
-	SDL_RenderClear(pRenderer);
 
 	// Setup vars for random c++11 style
 	std::random_device rd;
 	std::default_random_engine generator(rd());
-	std::uniform_int_distribution<int> distribution(RECT_MIN_WIDTH_HEIGHT, RECT_MAX_WIDTH_HEIGHT);
-	int rand = distribution(generator);
+	std::uniform_int_distribution<int> size_dist(RECT_MIN_WIDTH_HEIGHT, RECT_MAX_WIDTH_HEIGHT);
+	std::uniform_real_distribution<float> pos_dist(RECT_MIN_X, RECT_MAX_X);
+
+	std::vector<Object*> objects;
+
+	// Set background color 
+	SDL_SetRenderDrawColor(pRenderer, 0, 0, 0, 255);
+	SDL_RenderClear(pRenderer);
+	SDL_RenderPresent(pRenderer);
 
 	SDL_Event e;
 	bool quit = false;
 	
-	while (!quit)
+ 	while (!quit)
 	{
 		while (SDL_PollEvent(&e))
 		{
@@ -59,30 +143,56 @@ int main(int argc, char * argv[])
 				quit = true;
 				break;
 			}
+			if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_SPACE)
+			{
+				// Create object
 
-			// Draw rect
-			SDL_Rect r;
-			r.x = 400;
-			r.y = 300;
+				int size_rand = size_dist(generator);
+				float pos_rand = pos_dist(generator);
 
-			r.w = rand;
-			r.h = rand;
+				SDL_Rect r;
 
-			// Set rect color here
-			SDL_SetRenderDrawColor(pRenderer, 0, 0, 255, 255);
-			SDL_RenderFillRect(pRenderer, &r);
-			SDL_RenderPresent(pRenderer);
+				// Set some defaults for rect, otherwise SDL cofetime for in go insane
+				r.x = r.y = 0;
 
+				r.w = r.h = size_rand;
 
-			SDL_Delay(CONST_FRAME_DELAY);
+				Position pos = Position(pos_rand, RECT_Y);
+				Object* object = new Object(r, pos);
+				objects.push_back(object);
+			}
 
-			std::cout << "Loop" << std::endl;
 		}
+
+		// Set background color 
+		SDL_SetRenderDrawColor(pRenderer, 0, 0, 0, 255);
+		SDL_RenderClear(pRenderer);
+
+		// Set rect color here
+		SDL_SetRenderDrawColor(pRenderer, 0, 0, 255, 255);
+
+		// Update rectangles position
+
+		for (auto& object : objects)
+		{
+			UpdateObjects(object);
+			SDL_RenderFillRect(pRenderer, &object->GetRect());
+			SDL_RenderPresent(pRenderer);
+		}
+
+		SDL_Delay(CONST_FRAME_DELAY);	
 	}
 	
+	// Clear allocated memory
+	for (auto& object : objects)
+	{
+		delete object;
+	}
 
+	// Clean up
 	SDL_DestroyWindow(pWindow);
 	SDL_Quit();
+	
 
 	return 0;
 }
