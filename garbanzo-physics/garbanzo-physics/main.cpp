@@ -1,5 +1,15 @@
 #include <iostream>
+#include <random>
 #include <SDL.h>
+
+#define CONST_FRAME_DELAY 16.67
+#define RECT_MIN_WIDTH_HEIGHT 5
+#define RECT_MAX_WIDTH_HEIGHT 250
+
+int Clamp(int value, int low, int high)
+{
+	return std::max(low, std::min(value, high));
+}
 
 int main(int argc, char * argv[])
 {
@@ -31,18 +41,45 @@ int main(int argc, char * argv[])
 	SDL_SetRenderDrawColor(pRenderer, 0, 0, 0, 255);
 	SDL_RenderClear(pRenderer);
 
-	// Draw rect
-	SDL_Rect r;
-	r.x = r.y = r.w = r.h = 50;
+	// Setup vars for random c++11 style
+	std::random_device rd;
+	std::default_random_engine generator(rd());
+	std::uniform_int_distribution<int> distribution(RECT_MIN_WIDTH_HEIGHT, RECT_MAX_WIDTH_HEIGHT);
+	int rand = distribution(generator);
 
-	// Set rect color here
-	SDL_SetRenderDrawColor(pRenderer, 0, 0, 255, 255);
+	SDL_Event e;
+	bool quit = false;
+	
+	while (!quit)
+	{
+		while (SDL_PollEvent(&e))
+		{
+			if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE)
+			{
+				quit = true;
+				break;
+			}
 
-	SDL_RenderFillRect(pRenderer, &r);
+			// Draw rect
+			SDL_Rect r;
+			r.x = 400;
+			r.y = 300;
 
-	SDL_RenderPresent(pRenderer);
+			r.w = rand;
+			r.h = rand;
 
-	SDL_Delay(5000);
+			// Set rect color here
+			SDL_SetRenderDrawColor(pRenderer, 0, 0, 255, 255);
+			SDL_RenderFillRect(pRenderer, &r);
+			SDL_RenderPresent(pRenderer);
+
+
+			SDL_Delay(CONST_FRAME_DELAY);
+
+			std::cout << "Loop" << std::endl;
+		}
+	}
+	
 
 	SDL_DestroyWindow(pWindow);
 	SDL_Quit();
