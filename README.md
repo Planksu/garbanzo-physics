@@ -8,4 +8,4 @@ This is just a base for a upcoming course.
 # What is garbanzo?
 This is garbanzo:
 
-![Screenshot](garbanzo.jpg)
+![Screenshot](garbanzo.png)
