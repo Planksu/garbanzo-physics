@@ -3,16 +3,18 @@
 #include <SDL.h>
 
 // 6.944 = 144fps, 16.67 = 60fps
-#define CONST_FRAME_DELAY 6.944
+#define CONST_FRAME_DELAY 16.67
 
-#define RECT_MIN_WIDTH_HEIGHT 5
-#define RECT_MAX_WIDTH_HEIGHT 50
+#define RECT_MIN_SIZE 25
+#define RECT_MAX_SIZE 150
 #define RECT_MIN_X 0
 #define RECT_MAX_X 640
 #define RECT_Y -10
+#define MASS_MIN 0.5
+#define MASS_MAX 5
 
 #define G 9.81
-#define GRAVITY_SCALE 0.5
+#define GRAVITY_SCALE 0.1
 
 class Position
 {
@@ -78,6 +80,8 @@ private:
 	SDL_Rect r;
 	RGB color;
 
+	float mass;
+
 	void SetPos(float x, float y)
 	{
 		// Update virtual coordinates
@@ -95,11 +99,12 @@ private:
 	}
 
 public:
-	Object(SDL_Rect rect, Position p, RGB col)
+	Object(SDL_Rect rect, Position p, RGB col, float m)
 	{
 		r = rect;
 		pos = p;
 		color = col;
+		mass = m;
 
 		SetPos(p.GetX(), p.GetY());
 	}
@@ -107,6 +112,7 @@ public:
 	Position GetPos() { return pos; }
 	SDL_Rect GetRect() { return r; }
 	RGB GetColor() { return color; }
+	float GetMass() { return mass; }
 
 	void SetColor(RGB newColor)
 	{
@@ -122,7 +128,7 @@ public:
 
 void UpdateObjects(Object* object)
 {
-	object->UpdatePos(object->GetPos().GetX(), object->GetPos().GetY() + (G*GRAVITY_SCALE));
+	object->UpdatePos(object->GetPos().GetX(), object->GetPos().GetY() + (G*GRAVITY_SCALE*object->GetMass()));
 }
 
 int main(int argc, char * argv[])
@@ -155,8 +161,9 @@ int main(int argc, char * argv[])
 	// Setup vars for random c++11 style
 	std::random_device rd;
 	std::default_random_engine generator(rd());
-	std::uniform_int_distribution<int> size_dist(RECT_MIN_WIDTH_HEIGHT, RECT_MAX_WIDTH_HEIGHT);
+	std::uniform_int_distribution<int> size_dist(RECT_MIN_SIZE, RECT_MAX_SIZE);
 	std::uniform_real_distribution<float> pos_dist(RECT_MIN_X, RECT_MAX_X);
+	std::uniform_real_distribution<float> mass_dist(MASS_MIN, MASS_MAX);
 
 	std::vector<Object*> objects;
 
@@ -183,6 +190,7 @@ int main(int argc, char * argv[])
 
 				int size_rand = size_dist(generator);
 				float pos_rand = pos_dist(generator);
+				float mass_rand = mass_dist(generator);
 
 				SDL_Rect r;
 
@@ -193,7 +201,7 @@ int main(int argc, char * argv[])
 
 				RGB color = RGB(0, 255, 255, 255);
 				Position pos = Position(pos_rand, RECT_Y);
-				Object* object = new Object(r, pos, color);
+				Object* object = new Object(r, pos, color, mass_rand);
 				objects.push_back(object);
 			}
 
@@ -226,6 +234,19 @@ int main(int argc, char * argv[])
 						objects[j]->SetColor(RGB(255, 0, 0, 255));
 					}
 				}
+			}
+		}
+
+		// Remove objects that are not visible
+		for (int i = 0; i < objects.size(); i++)
+		{
+			if (objects[i]->GetPos().GetY() > 600)
+			{
+				// Object is out of screen, remove it
+				std::vector<Object*>::iterator it = (objects.begin() + i);
+				Object* objectToDelete = *(it);
+				objects.erase(it);
+				delete objectToDelete;
 			}
 		}
 
