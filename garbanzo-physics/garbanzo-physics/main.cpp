@@ -2,6 +2,7 @@
 #include <random>
 #include <SDL.h>
 
+// 6.944 = 144fps, 16.67 = 60fps
 #define CONST_FRAME_DELAY 6.944
 
 #define RECT_MIN_WIDTH_HEIGHT 5
@@ -45,11 +46,37 @@ public:
 	}
 };
 
+class RGB
+{
+public:
+	RGB(int red, int green, int blue, int alpha)
+	{
+		r = red;
+		g = green;
+		b = blue;
+		a = alpha;
+	}
+
+	RGB()
+	{
+		r = 0;
+		g = 0;
+		b = 0;
+		a = 255;
+	}
+
+	int r;
+	int g;
+	int b;
+	int a;
+};
+
 class Object
 {
 private:
 	Position pos;
 	SDL_Rect r;
+	RGB color;
 
 	void SetPos(float x, float y)
 	{
@@ -68,16 +95,23 @@ private:
 	}
 
 public:
-	Object(SDL_Rect rect, Position p)
+	Object(SDL_Rect rect, Position p, RGB col)
 	{
 		r = rect;
 		pos = p;
-		
+		color = col;
+
 		SetPos(p.GetX(), p.GetY());
 	}
 
 	Position GetPos() { return pos; }
 	SDL_Rect GetRect() { return r; }
+	RGB GetColor() { return color; }
+
+	void SetColor(RGB newColor)
+	{
+		color = newColor;
+	}
 
 	void UpdatePos(float newX, float newY)
 	{
@@ -157,8 +191,9 @@ int main(int argc, char * argv[])
 
 				r.w = r.h = size_rand;
 
+				RGB color = RGB(0, 255, 255, 255);
 				Position pos = Position(pos_rand, RECT_Y);
-				Object* object = new Object(r, pos);
+				Object* object = new Object(r, pos, color);
 				objects.push_back(object);
 			}
 
@@ -168,16 +203,30 @@ int main(int argc, char * argv[])
 		SDL_SetRenderDrawColor(pRenderer, 0, 0, 0, 255);
 		SDL_RenderClear(pRenderer);
 
-		// Set rect color here
-		SDL_SetRenderDrawColor(pRenderer, 0, 0, 255, 255);
-
 		// Update rectangles position
-
 		for (auto& object : objects)
 		{
+			SDL_SetRenderDrawColor(pRenderer, object->GetColor().r, object->GetColor().g, object->GetColor().b, object->GetColor().a);
 			UpdateObjects(object);
 			SDL_RenderFillRect(pRenderer, &object->GetRect());
 			SDL_RenderPresent(pRenderer);
+		}
+
+		// Check for collisions
+		for (int i = 0; i < objects.size(); i++)
+		{
+			for (int j = 0; j < objects.size(); j++)
+			{
+				// If index is same, don't check for collisions with self
+				if (i != j)
+				{
+					if (SDL_HasIntersection(&objects[i]->GetRect(), &objects[j]->GetRect()) == SDL_TRUE)
+					{
+						objects[i]->SetColor(RGB(255, 0, 0, 255));
+						objects[j]->SetColor(RGB(255, 0, 0, 255));
+					}
+				}
+			}
 		}
 
 		SDL_Delay(CONST_FRAME_DELAY);	
