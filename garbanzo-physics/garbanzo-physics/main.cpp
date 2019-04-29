@@ -1,7 +1,7 @@
 #include <iostream>
 #include <random>
 #include <SDL.h>
-#include "Position.h"
+#include "Vector2.h"
 #include "RGB.h"
 #include "Object.h"
 
@@ -19,16 +19,30 @@
 #define G 9.81
 #define GRAVITY_SCALE 0.1
 
+#pragma region Math functions
+float DotProduct(Vector2 first, Vector2 second)
+{
+	return (first.GetX() * second.GetX()) + (first.GetY() * second.GetY());
+}
 
+bool CheckAABBCollision(AABB first, AABB second)
+{
+	if (first.max.GetX() < second.min.GetX() || first.min.GetX() > second.max.GetX()) return false;
+	if (first.max.GetY() < second.min.GetY() || first.min.GetY() > second.max.GetY()) return false;
 
-
-
-
-
+	return true;
+}
+#pragma endregion
 
 void UpdateObjects(Object* object)
 {
 	object->UpdatePos(object->GetPos().GetX(), object->GetPos().GetY() + (G*GRAVITY_SCALE*object->GetMass()));
+}
+
+void ResolveCollision(Object* a, Object* b)
+{
+	Vector2 ab = b->GetVelocity() - a->GetVelocity();
+	float velocityAlongNormal = DotProduct(ab, )
 }
 
 int main(int argc, char * argv[])
@@ -100,7 +114,7 @@ int main(int argc, char * argv[])
 				r.w = r.h = size_rand;
 
 				RGB color = RGB(0, 255, 255, 255);
-				Position pos = Position(pos_rand, RECT_Y);
+				Vector2 pos = Vector2(pos_rand, RECT_Y);
 				Object* object = new Object(r, pos, color, mass_rand);
 				objects.push_back(object);
 			}
@@ -128,10 +142,9 @@ int main(int argc, char * argv[])
 				// If index is same, don't check for collisions with self
 				if (i != j)
 				{
-					if (SDL_HasIntersection(&objects[i]->GetRect(), &objects[j]->GetRect()) == SDL_TRUE)
+					if (CheckAABBCollision(objects[i]->GetBox(), objects[j]->GetBox()))
 					{
-						objects[i]->SetColor(RGB(255, 0, 0, 255));
-						objects[j]->SetColor(RGB(255, 0, 0, 255));
+						ResolveCollision(objects[i], objects[j]);
 					}
 				}
 			}

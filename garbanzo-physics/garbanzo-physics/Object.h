@@ -1,18 +1,30 @@
 #ifndef _OBJECT_HEADER_
 #define _OBJECT_HEADER_
 
-#include "Position.h"
+#include "Vector2.h"
 #include "RGB.h"
 #include <SDL.h>
+
+struct AABB
+{
+	Vector2 min;
+	Vector2 max;
+};
 
 class Object
 {
 private:
-	Position pos;
+	// Visual representation variables
+	Vector2 pos;
 	SDL_Rect r;
 	RGB color;
+	AABB box;
 
+	// Physics variables
 	float mass;
+	Vector2 velocity;
+	float restitution;
+
 
 	void SetPos(float x, float y)
 	{
@@ -31,14 +43,18 @@ private:
 	}
 
 public:
-	Object(SDL_Rect rect, Position p, RGB col, float m);
+	Object(SDL_Rect rect, Vector2 p, RGB col, float m);
 	~Object();
 
 
-	Position GetPos() { return pos; }
+	Vector2 GetPos() { return pos; }
 	SDL_Rect GetRect() { return r; }
 	RGB GetColor() { return color; }
+	AABB GetBox() { return box; }
+	
 	float GetMass() { return mass; }
+	Vector2 GetVelocity() { return velocity; }
+	float GetRestitution() { return restitution; }
 
 	void SetColor(RGB newColor);
 	void UpdatePos(float newX, float newY);

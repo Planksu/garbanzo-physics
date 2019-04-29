@@ -2,12 +2,15 @@
 
 
 
-Object::Object(SDL_Rect rect, Position p, RGB col, float m)
+Object::Object(SDL_Rect rect, Vector2 p, RGB col, float m)
 {
 	r = rect;
 	pos = p;
 	color = col;
 	mass = m;
+
+	box.min = Vector2(rect.x, rect.y);
+	box.max = Vector2(rect.x + rect.w, rect.y + rect.h);
 
 	SetPos(p.GetX(), p.GetY());
 }
