@@ -1,6 +1,9 @@
 #include <iostream>
 #include <random>
 #include <SDL.h>
+#include "Position.h"
+#include "RGB.h"
+#include "Object.h"
 
 // 6.944 = 144fps, 16.67 = 60fps
 #define CONST_FRAME_DELAY 16.67
@@ -16,114 +19,11 @@
 #define G 9.81
 #define GRAVITY_SCALE 0.1
 
-class Position
-{
-private:
-	float x;
-	float y;
 
-public:
-	Position(float xPos, float yPos)
-	{
-		x = xPos;
-		y = yPos;
-	}
 
-	Position()
-	{
-		x = 0.f;
-		y = 0.f;
-	}
 
-	float GetX() const { return x; }
-	float GetY() const { return y; }
 
-	void SetX(float newX)
-	{
-		x = newX;
-	}
-	void SetY(float newY)
-	{
-		y = newY;
-	}
-};
 
-class RGB
-{
-public:
-	RGB(int red, int green, int blue, int alpha)
-	{
-		r = red;
-		g = green;
-		b = blue;
-		a = alpha;
-	}
-
-	RGB()
-	{
-		r = 0;
-		g = 0;
-		b = 0;
-		a = 255;
-	}
-
-	int r;
-	int g;
-	int b;
-	int a;
-};
-
-class Object
-{
-private:
-	Position pos;
-	SDL_Rect r;
-	RGB color;
-
-	float mass;
-
-	void SetPos(float x, float y)
-	{
-		// Update virtual coordinates
-		pos.SetX(x);
-		pos.SetY(y);
-
-		// Update rect coordinates
-		r.x = pos.GetX();
-		r.y = pos.GetY();
-	}
-	void SetDimensions(float w, float h)
-	{
-		r.w = w;
-		r.h = h;
-	}
-
-public:
-	Object(SDL_Rect rect, Position p, RGB col, float m)
-	{
-		r = rect;
-		pos = p;
-		color = col;
-		mass = m;
-
-		SetPos(p.GetX(), p.GetY());
-	}
-
-	Position GetPos() { return pos; }
-	SDL_Rect GetRect() { return r; }
-	RGB GetColor() { return color; }
-	float GetMass() { return mass; }
-
-	void SetColor(RGB newColor)
-	{
-		color = newColor;
-	}
-
-	void UpdatePos(float newX, float newY)
-	{
-		SetPos(newX, newY);
-	}
-};
 
 
 void UpdateObjects(Object* object)
