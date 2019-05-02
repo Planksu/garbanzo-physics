@@ -8,11 +8,12 @@ Object::Object(SDL_Rect rect, Vector2 p, RGB col, float m)
 	pos = p;
 	color = col;
 	mass = m;
+	velocity = Vector2(0, 0);
 
-	box.min = Vector2(rect.x, rect.y);
-	box.max = Vector2(rect.x + rect.w, rect.y + rect.h);
+	box.min = Vector2(pos.x - rect.w / 2, pos.y - rect.h / 2);
+	box.max = Vector2(pos.x + rect.w/2, pos.y + rect.h/2);
 
-	SetPos(p.GetX(), p.GetY());
+	SetPos(p.x, p.y);
 }
 
 

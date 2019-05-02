@@ -4,24 +4,35 @@
 
 class Vector2
 {
-private:
+public:
 	float x;
 	float y;
 
-public:
 	Vector2(float xPos, float yPos);
 	Vector2();
 	~Vector2();
-
-	float GetX() const { return x; }
-	float GetY() const { return y; }
 
 	void SetX(float newX);
 	void SetY(float newY);
 
 	Vector2 operator-(const Vector2 &other) const
 	{
-		return Vector2(this->GetX() - other.GetX(), this->GetY() - other.GetY());
+		return Vector2(this->x - other.x, this->y - other.y);
+	}
+
+	Vector2 operator+(const Vector2 &other) const
+	{
+		return Vector2(this->x + other.x, this->y + other.y);
+	}
+
+	Vector2 operator*(const Vector2 &other) const
+	{
+		return Vector2(this->x * other.x, this->y * other.y);
+	}
+
+	Vector2 operator*(const float &other) const
+	{
+		return Vector2(this->x * other, this->y * other);
 	}
 };
 

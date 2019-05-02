@@ -33,8 +33,8 @@ private:
 		pos.SetY(y);
 
 		// Update rect coordinates
-		r.x = pos.GetX();
-		r.y = pos.GetY();
+		r.x = pos.x;
+		r.y = pos.y;
 	}
 	void SetDimensions(float w, float h)
 	{
@@ -48,7 +48,7 @@ public:
 
 
 	Vector2 GetPos() { return pos; }
-	SDL_Rect GetRect() { return r; }
+	SDL_Rect GetRect() { return { r.x - r.w / 2, r.y - r.h / 2, r.w, r.h }; }
 	RGB GetColor() { return color; }
 	AABB GetBox() { return box; }
 	
@@ -57,6 +57,10 @@ public:
 	float GetRestitution() { return restitution; }
 
 	void SetColor(RGB newColor);
+	void SetVelocity(Vector2 newVel)
+	{
+		velocity = newVel;
+	}
 	void UpdatePos(float newX, float newY);
 
 };

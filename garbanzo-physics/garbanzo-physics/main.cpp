@@ -19,31 +19,72 @@
 #define G 9.81
 #define GRAVITY_SCALE 0.1
 
+SDL_Renderer* pRenderer = NULL;
+
 #pragma region Math functions
 float DotProduct(Vector2 first, Vector2 second)
 {
-	return (first.GetX() * second.GetX()) + (first.GetY() * second.GetY());
+	return (first.x * second.x) + (first.y * second.y);
 }
 
-bool CheckAABBCollision(AABB first, AABB second)
+Vector2 Normalize(Vector2 input)
 {
-	if (first.max.GetX() < second.min.GetX() || first.min.GetX() > second.max.GetX()) return false;
-	if (first.max.GetY() < second.min.GetY() || first.min.GetY() > second.max.GetY()) return false;
+	float length = sqrt(input.x * input.x + input.y * input.y);
 
-	return true;
+	return Vector2(input.x / length, input.y / length);
+}
+
+bool CheckAABBCollision(Object* first, Object* second)
+{
+	if ((first->GetBox().max.x < second->GetBox().min.x && first->GetBox().max.y < second->GetBox().min.y) || (first->GetBox().min.x > second->GetBox().max.x && first->GetBox().min.y < second->GetBox().max.y))
+	{
+		return true;
+	}
+
+	return false;
 }
 #pragma endregion
 
 void UpdateObjects(Object* object)
 {
-	object->UpdatePos(object->GetPos().GetX(), object->GetPos().GetY() + (G*GRAVITY_SCALE*object->GetMass()));
+	object->UpdatePos(object->GetPos().x + object->GetVelocity().x, object->GetPos().y + (G*GRAVITY_SCALE*object->GetMass()) + object->GetVelocity().y);
 }
 
 void ResolveCollision(Object* a, Object* b)
 {
 	Vector2 ab = b->GetVelocity() - a->GetVelocity();
-	float velocityAlongNormal = DotProduct(ab, )
+	
+	float ex = (a->GetRect().w/2);
+	float ey = (a->GetRect().h/2);
+
+	float dx = DotProduct(ab, Vector2(0, 1));
+
+	if (dx > ex) dx = ex;
+	if (dx < -ex) dx = -ex;
+
+	float dy = DotProduct(ab, Vector2(1, 0));
+
+	if (dy > ey) dy = ey;
+	if (dy < -ey) dy = -ey;
+
+	Vector2 r = Vector2(a->GetPos());
+	Vector2 p = r + Vector2(0,1) * dx + Vector2(1, 0)*dy;
+
+	Vector2 collision_norm = Normalize(b->GetPos() - p);
+
+	float e = fmin(a->GetRestitution(), b->GetRestitution());
+
+	std::cout << collision_norm.x << " " << collision_norm.y << std::endl;
+
+	Vector2 startPoint = a->GetPos();
+	Vector2 endPoint = startPoint + collision_norm * 500;
+	SDL_RenderDrawLine(pRenderer, startPoint.x, startPoint.y, endPoint.x, endPoint.y);
+
+	a->SetVelocity(collision_norm * -1.f * e);
+//	b->SetVelocity(collision_norm * e);
 }
+
+
 
 int main(int argc, char * argv[])
 {
@@ -66,7 +107,6 @@ int main(int argc, char * argv[])
 								SDL_WINDOW_SHOWN);
 
 	// Create renderer
-	SDL_Renderer* pRenderer = NULL; 
 	pRenderer = SDL_CreateRenderer(	pWindow,
 									-1,	
 									SDL_RENDERER_ACCELERATED);
@@ -131,8 +171,9 @@ int main(int argc, char * argv[])
 			SDL_SetRenderDrawColor(pRenderer, object->GetColor().r, object->GetColor().g, object->GetColor().b, object->GetColor().a);
 			UpdateObjects(object);
 			SDL_RenderFillRect(pRenderer, &object->GetRect());
-			SDL_RenderPresent(pRenderer);
+			
 		}
+
 
 		// Check for collisions
 		for (int i = 0; i < objects.size(); i++)
@@ -142,7 +183,7 @@ int main(int argc, char * argv[])
 				// If index is same, don't check for collisions with self
 				if (i != j)
 				{
-					if (CheckAABBCollision(objects[i]->GetBox(), objects[j]->GetBox()))
+					if (CheckAABBCollision(objects[i], objects[j]))
 					{
 						ResolveCollision(objects[i], objects[j]);
 					}
@@ -153,7 +194,7 @@ int main(int argc, char * argv[])
 		// Remove objects that are not visible
 		for (int i = 0; i < objects.size(); i++)
 		{
-			if (objects[i]->GetPos().GetY() > 600)
+			if (objects[i]->GetPos().y > 600)
 			{
 				// Object is out of screen, remove it
 				std::vector<Object*>::iterator it = (objects.begin() + i);
@@ -162,6 +203,8 @@ int main(int argc, char * argv[])
 				delete objectToDelete;
 			}
 		}
+
+		SDL_RenderPresent(pRenderer);
 
 		SDL_Delay(CONST_FRAME_DELAY);	
 	}
