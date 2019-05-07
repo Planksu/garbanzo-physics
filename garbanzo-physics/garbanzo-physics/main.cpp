@@ -6,12 +6,16 @@
 #include "Object.h"
 
 // 6.944 = 144fps, 16.67 = 60fps
-#define CONST_FRAME_DELAY 16.67
+#define CONST_FRAME_DELAY 6.944
+
+// Window variables
+#define WIDTH 1920
+#define HEIGHT 1080
 
 #define RECT_MIN_SIZE 25
 #define RECT_MAX_SIZE 150
 #define RECT_MIN_X 0
-#define RECT_MAX_X 640
+#define RECT_MAX_X WIDTH
 #define RECT_Y -10
 #define MASS_MIN 0.5
 #define MASS_MAX 5
@@ -94,11 +98,11 @@ void ResolveCollision(Object* a, Object* b)
 
 	float e = fmin(a->GetRestitution(), b->GetRestitution());
 
-	//std::cout << collision_norm.x << " " << collision_norm.y << std::endl;
-
+#if DEBUG
 	Vector2 startPoint = a->GetPos();
 	Vector2 endPoint = startPoint + collision_norm * 500;
 	SDL_RenderDrawLine(pRenderer, startPoint.x, startPoint.y, endPoint.x, endPoint.y);
+#endif
 
 	a->SetVelocity(collision_norm * -1.f * e);
 	b->SetVelocity(collision_norm * e);
@@ -123,7 +127,7 @@ int main(int argc, char * argv[])
 	pWindow = SDL_CreateWindow("Garbanzo physics demo",
 								SDL_WINDOWPOS_UNDEFINED,
 								SDL_WINDOWPOS_UNDEFINED,
-								800, 600,
+								WIDTH, HEIGHT,
 								SDL_WINDOW_SHOWN);
 
 	// Create renderer
@@ -191,7 +195,6 @@ int main(int argc, char * argv[])
 			SDL_SetRenderDrawColor(pRenderer, object->GetColor().r, object->GetColor().g, object->GetColor().b, object->GetColor().a);
 			UpdateObjects(object);
 			SDL_RenderFillRect(pRenderer, &object->GetRect());
-			
 		}
 
 
@@ -216,7 +219,8 @@ int main(int argc, char * argv[])
 		// Remove objects that are not visible
 		for (int i = 0; i < objects.size(); i++)
 		{
-			if (objects[i]->GetPos().y > 600)
+			// If the objects y position is greater than the screen height, remove them as they're offscreen
+			if (objects[i]->GetPos().y > HEIGHT)
 			{
 				// Object is out of screen, remove it
 				std::vector<Object*>::iterator it = (objects.begin() + i);
