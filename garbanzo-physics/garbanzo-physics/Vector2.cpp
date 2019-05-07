@@ -17,12 +17,3 @@ Vector2::~Vector2()
 {
 
 }
-
-void Vector2::SetX(float newX)
-{
-	x = newX;
-}
-void Vector2::SetY(float newY)
-{
-	y = newY;
-}

@@ -4,11 +4,13 @@
 #include "Vector2.h"
 #include "RGB.h"
 #include <SDL.h>
+#include <iostream>
 
+// AABB struct using min as lower left corner and max as top right corner
 struct AABB
 {
-	Vector2 min;
-	Vector2 max;
+	Vector2 pos;
+	Vector2 size;
 };
 
 class Object
@@ -29,12 +31,18 @@ private:
 	void SetPos(float x, float y)
 	{
 		// Update virtual coordinates
-		pos.SetX(x);
-		pos.SetY(y);
+		pos.x = x;
+		pos.y = y;
 
 		// Update rect coordinates
 		r.x = pos.x;
 		r.y = pos.y;
+
+		box.pos = Vector2(x, y);
+
+		//std::cout << "Box position: " << box.pos.x << " " << box.pos.y << " " << std::endl;
+		//std::cout << "Rect position: " << r.x << " " << r.y << " " << std::endl;
+		//std::cout << "Position: " << pos.x << " " << pos.y << " " << std::endl;
 	}
 	void SetDimensions(float w, float h)
 	{
@@ -43,7 +51,7 @@ private:
 	}
 
 public:
-	Object(SDL_Rect rect, Vector2 p, RGB col, float m);
+	Object(SDL_Rect rect, Vector2 p, RGB col, float m, float e);
 	~Object();
 
 

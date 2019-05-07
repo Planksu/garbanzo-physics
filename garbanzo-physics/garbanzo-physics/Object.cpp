@@ -2,16 +2,17 @@
 
 
 
-Object::Object(SDL_Rect rect, Vector2 p, RGB col, float m)
+Object::Object(SDL_Rect rect, Vector2 p, RGB col, float m, float e)
 {
 	r = rect;
 	pos = p;
 	color = col;
 	mass = m;
+	restitution = e;
 	velocity = Vector2(0, 0);
 
-	box.min = Vector2(pos.x - rect.w / 2, pos.y - rect.h / 2);
-	box.max = Vector2(pos.x + rect.w/2, pos.y + rect.h/2);
+	box.pos = p;
+	box.size = Vector2(rect.w, rect.h);
 
 	SetPos(p.x, p.y);
 }

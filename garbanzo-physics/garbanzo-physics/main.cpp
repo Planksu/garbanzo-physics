@@ -36,10 +36,46 @@ Vector2 Normalize(Vector2 input)
 
 bool CheckAABBCollision(Object* first, Object* second)
 {
-	if ((first->GetBox().max.x < second->GetBox().min.x && first->GetBox().max.y < second->GetBox().min.y) || (first->GetBox().min.x > second->GetBox().max.x && first->GetBox().min.y < second->GetBox().max.y))
+	/*std::cout << "First aabb pos: " << first->GetBox().pos.x << " " << first->GetBox().pos.y << std::endl;
+	std::cout << "First aabb size: " << first->GetBox().size.x << " " << first->GetBox().size.y << std::endl;*/
+
+	Vector2 firstMax = first->GetBox().pos + first->GetBox().size;
+
+	/*std::cout << "First max: " << firstMax.x << " " << firstMax.y << std::endl;*/
+
+	Vector2 secondMax = second->GetBox().pos + second->GetBox().size;
+	Vector2 firstMin = first->GetBox().pos;
+
+	/*std::cout << "First min: " << firstMin.x << " " << firstMin.y << std::endl;*/
+
+	Vector2 secondMin = second->GetBox().pos;
+
+
+	//if (firstMax.x > secondMin.x && firstMax.y > secondMin.y)
+	//{
+	//	std::cout << "FirstMax.x: " << firstMax.x << ", " << "SecondMin.x: " << secondMin.x << ", " << "FirstMax.y: " << firstMax.y << ", " << "SecondMin.y:" << secondMin.y << std::endl;
+
+	//	std::cout << "First type of collision happened!" << std::endl;
+	//}
+
+	//if (firstMin.x < secondMax.x && firstMin.y < secondMax.y)
+	//{
+	//	std::cout << "Second type of collision happened!" << std::endl;
+	//}
+
+	if (first->GetBox().pos.x < second->GetBox().pos.x + second->GetBox().size.x &&
+		first->GetBox().pos.x + first->GetBox().size.x > second->GetBox().pos.x &&
+		first->GetBox().pos.y < second->GetBox().pos.y + second->GetBox().size.y &&
+		first->GetBox().pos.y + first->GetBox().size.y > second->GetBox().pos.y)
 	{
+		//std::cout << "END OF METHOD\n\n" << std::endl;
 		return true;
 	}
+
+	//if (/*(firstMax.x > secondMin.x && firstMax.y > secondMin.y) || */(firstMin.x < secondMax.x && firstMin.y < secondMax.y))
+	//{
+
+	//}
 
 	return false;
 }
@@ -74,14 +110,14 @@ void ResolveCollision(Object* a, Object* b)
 
 	float e = fmin(a->GetRestitution(), b->GetRestitution());
 
-	std::cout << collision_norm.x << " " << collision_norm.y << std::endl;
+	//std::cout << collision_norm.x << " " << collision_norm.y << std::endl;
 
 	Vector2 startPoint = a->GetPos();
 	Vector2 endPoint = startPoint + collision_norm * 500;
 	SDL_RenderDrawLine(pRenderer, startPoint.x, startPoint.y, endPoint.x, endPoint.y);
 
 	a->SetVelocity(collision_norm * -1.f * e);
-//	b->SetVelocity(collision_norm * e);
+	b->SetVelocity(collision_norm * e);
 }
 
 
@@ -155,7 +191,7 @@ int main(int argc, char * argv[])
 
 				RGB color = RGB(0, 255, 255, 255);
 				Vector2 pos = Vector2(pos_rand, RECT_Y);
-				Object* object = new Object(r, pos, color, mass_rand);
+				Object* object = new Object(r, pos, color, mass_rand, 1.f);
 				objects.push_back(object);
 			}
 
@@ -178,7 +214,7 @@ int main(int argc, char * argv[])
 		// Check for collisions
 		for (int i = 0; i < objects.size(); i++)
 		{
-			for (int j = 0; j < objects.size(); j++)
+			for (int j = i+1; j < objects.size(); j++)
 			{
 				// If index is same, don't check for collisions with self
 				if (i != j)
