@@ -39,6 +39,22 @@ Vector2 Normalize(Vector2 input)
 
 	return Vector2(input.x / length, input.y / length);
 }
+
+float CrossProduct(Vector2 first, Vector2 second)
+{
+	return first.x * second.y - first.y * second.x;
+}
+
+Vector2 CrossProduct(Vector2 first, float s)
+{
+	return Vector2(s * first.y, -s * first.x);
+}
+
+Vector2 CrossProduct(float s, Vector2 first)
+{
+	return Vector2(-s * first.y, s * first.x);
+}
+
 #pragma endregion
 
 #pragma region Collision methods

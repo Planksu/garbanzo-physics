@@ -2,14 +2,19 @@
 
 
 
-Object::Object(SDL_Rect rect, Vector2 p, RGB col, float m, float e)
+Object::Object(SDL_Rect rect, Vector2 p, RGB col, float m, Vector2 f, Vector2 vel, float a, float o, float angVel, float torq, float e)
 {
 	r = rect;
 	pos = p;
 	color = col;
 	mass = m;
+	force = f;
+	velocity = vel;
+	acceleration = a;
+	orientation = o;
+	angularVelocity = angVel;
+	torque = torq;
 	restitution = e;
-	velocity = Vector2(0, 0);
 
 	box.pos = p;
 	box.size = Vector2(rect.w, rect.h);

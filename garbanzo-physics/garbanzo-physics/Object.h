@@ -4,7 +4,6 @@
 #include "Vector2.h"
 #include "RGB.h"
 #include <SDL.h>
-#include <iostream>
 
 // AABB struct using min as lower left corner and max as top right corner
 struct AABB
@@ -17,14 +16,23 @@ class Object
 {
 private:
 	// Visual representation variables
-	Vector2 pos;
 	SDL_Rect r;
+	Vector2 pos;
 	RGB color;
 	AABB box;
 
 	// Physics variables
+	// Linear
 	float mass;
+	Vector2 force;
 	Vector2 velocity;
+	float acceleration;
+
+	// Angular
+	float orientation;
+	float angularVelocity;
+	float torque;
+
 	float restitution;
 
 
@@ -39,10 +47,6 @@ private:
 		r.y = pos.y;
 
 		box.pos = Vector2(x, y);
-
-		//std::cout << "Box position: " << box.pos.x << " " << box.pos.y << " " << std::endl;
-		//std::cout << "Rect position: " << r.x << " " << r.y << " " << std::endl;
-		//std::cout << "Position: " << pos.x << " " << pos.y << " " << std::endl;
 	}
 	void SetDimensions(float w, float h)
 	{
@@ -51,7 +55,7 @@ private:
 	}
 
 public:
-	Object(SDL_Rect rect, Vector2 p, RGB col, float m, float e);
+	Object(SDL_Rect rect, Vector2 p, RGB col, float m, Vector2 f, Vector2 vel, float a, float o, float angVel, float torq, float e);
 	~Object();
 
 
