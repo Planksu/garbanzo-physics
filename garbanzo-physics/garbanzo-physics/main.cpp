@@ -5,8 +5,8 @@
 #include "RGB.h"
 #include "Object.h"
 
-// 6.944 = 144fps, 16.67 = 60fps
-#define CONST_FRAME_DELAY 6.944
+// 180 times per second = 5.555ms
+#define CONST_PHYSICS_DELAY 5.555
 
 // Window variables
 #define WIDTH 1920
@@ -39,7 +39,9 @@ Vector2 Normalize(Vector2 input)
 
 	return Vector2(input.x / length, input.y / length);
 }
+#pragma endregion
 
+#pragma region Collision methods
 bool CheckAABBCollision(Object* first, Object* second)
 {
 #if DEBUG
@@ -66,12 +68,6 @@ bool CheckAABBCollision(Object* first, Object* second)
 	}
 
 	return false;
-}
-#pragma endregion
-
-void UpdateObjects(Object* object)
-{
-	object->UpdatePos(object->GetPos().x + object->GetVelocity().x, object->GetPos().y + (G*GRAVITY_SCALE*object->GetMass()) + object->GetVelocity().y);
 }
 
 void ResolveCollision(Object* a, Object* b)
@@ -107,8 +103,82 @@ void ResolveCollision(Object* a, Object* b)
 	a->SetVelocity(collision_norm * -1.f * e);
 	b->SetVelocity(collision_norm * e);
 }
+#pragma endregion
 
+void UpdateObjects(std::vector<Object*> &objects)
+{
+	for (auto& object : objects)
+	{
+		SDL_SetRenderDrawColor(pRenderer, object->GetColor().r, object->GetColor().g, object->GetColor().b, object->GetColor().a);
+		object->UpdatePos(object->GetPos().x + object->GetVelocity().x, object->GetPos().y + (G*GRAVITY_SCALE*object->GetMass()) + object->GetVelocity().y);
+		SDL_RenderFillRect(pRenderer, &object->GetRect());
+	}
+}
 
+void CreateObject(std::vector<Object*> &objects)
+{
+	// Setup vars for random c++11 style
+	// Although techinally it is inefficient to create a new random engine every time we want a new object,
+	// the performance hit is negligible. This is my preferred method as passing the random engines as method variables is impossible (?)
+	std::random_device rd;
+	std::default_random_engine generator(rd());
+	std::uniform_int_distribution<int> size_dist(RECT_MIN_SIZE, RECT_MAX_SIZE);
+	std::uniform_real_distribution<float> pos_dist(RECT_MIN_X, RECT_MAX_X);
+	std::uniform_real_distribution<float> mass_dist(MASS_MIN, MASS_MAX);
+
+	// Create object
+	int size_rand = size_dist(generator);
+	float pos_rand = pos_dist(generator);
+	float mass_rand = mass_dist(generator);
+	SDL_Rect r;
+
+	// Set some defaults for rect, otherwise SDL cofetime for in go insane
+	r.x = r.y = 0;
+	r.w = r.h = size_rand;
+
+	RGB color = RGB(0, 255, 255, 255);
+	Vector2 pos = Vector2(pos_rand, RECT_Y);
+	Object* object = new Object(r, pos, color, mass_rand, 1.f);
+	objects.push_back(object);
+}
+
+void CollisionCheck(std::vector<Object*> &objects)
+{
+	// Check for collisions
+	for (int i = 0; i < objects.size(); i++)
+	{
+		// The j = i+1 prevents us from checking the same objects for collisions several times per frame
+		// LINK: https://gamedev.stackexchange.com/a/24289 
+		for (int j = i + 1; j < objects.size(); j++)
+		{
+			// If index is same, don't check for collisions with self
+			if (i != j)
+			{
+				if (CheckAABBCollision(objects[i], objects[j]))
+				{
+					ResolveCollision(objects[i], objects[j]);
+				}
+			}
+		}
+	}
+}
+
+void RemoveUnseen(std::vector<Object*> &objects)
+{
+	// Remove objects that are not visible
+	for (int i = 0; i < objects.size(); i++)
+	{
+		// If the objects y position is greater than the screen height, remove them as they're offscreen
+		if (objects[i]->GetPos().y > HEIGHT)
+		{
+			// Object is out of screen, remove it
+			std::vector<Object*>::iterator it = (objects.begin() + i);
+			Object* objectToDelete = *(it);
+			objects.erase(it);
+			delete objectToDelete;
+		}
+	}
+}
 
 int main(int argc, char * argv[])
 {
@@ -133,15 +203,9 @@ int main(int argc, char * argv[])
 	// Create renderer
 	pRenderer = SDL_CreateRenderer(	pWindow,
 									-1,	
-									SDL_RENDERER_ACCELERATED);
+									SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 
 
-	// Setup vars for random c++11 style
-	std::random_device rd;
-	std::default_random_engine generator(rd());
-	std::uniform_int_distribution<int> size_dist(RECT_MIN_SIZE, RECT_MAX_SIZE);
-	std::uniform_real_distribution<float> pos_dist(RECT_MIN_X, RECT_MAX_X);
-	std::uniform_real_distribution<float> mass_dist(MASS_MIN, MASS_MAX);
 
 	std::vector<Object*> objects;
 
@@ -152,7 +216,8 @@ int main(int argc, char * argv[])
 
 	SDL_Event e;
 	bool quit = false;
-	
+
+
  	while (!quit)
 	{
 		while (SDL_PollEvent(&e))
@@ -164,75 +229,20 @@ int main(int argc, char * argv[])
 			}
 			if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_SPACE)
 			{
-				// Create object
-
-				int size_rand = size_dist(generator);
-				float pos_rand = pos_dist(generator);
-				float mass_rand = mass_dist(generator);
-
-				SDL_Rect r;
-
-				// Set some defaults for rect, otherwise SDL cofetime for in go insane
-				r.x = r.y = 0;
-
-				r.w = r.h = size_rand;
-
-				RGB color = RGB(0, 255, 255, 255);
-				Vector2 pos = Vector2(pos_rand, RECT_Y);
-				Object* object = new Object(r, pos, color, mass_rand, 1.f);
-				objects.push_back(object);
+				CreateObject(objects);
 			}
-
 		}
 
 		// Set background color 
 		SDL_SetRenderDrawColor(pRenderer, 0, 0, 0, 255);
 		SDL_RenderClear(pRenderer);
 
-		// Update rectangles position
-		for (auto& object : objects)
-		{
-			SDL_SetRenderDrawColor(pRenderer, object->GetColor().r, object->GetColor().g, object->GetColor().b, object->GetColor().a);
-			UpdateObjects(object);
-			SDL_RenderFillRect(pRenderer, &object->GetRect());
-		}
-
-
-		// Check for collisions
-		for (int i = 0; i < objects.size(); i++)
-		{
-			// The j = i+1 prevents us from checking the same objects for collisions several times per frame
-			// LINK: https://gamedev.stackexchange.com/a/24289 
-			for (int j = i+1; j < objects.size(); j++)
-			{
-				// If index is same, don't check for collisions with self
-				if (i != j)
-				{
-					if (CheckAABBCollision(objects[i], objects[j]))
-					{
-						ResolveCollision(objects[i], objects[j]);
-					}
-				}
-			}
-		}
-
-		// Remove objects that are not visible
-		for (int i = 0; i < objects.size(); i++)
-		{
-			// If the objects y position is greater than the screen height, remove them as they're offscreen
-			if (objects[i]->GetPos().y > HEIGHT)
-			{
-				// Object is out of screen, remove it
-				std::vector<Object*>::iterator it = (objects.begin() + i);
-				Object* objectToDelete = *(it);
-				objects.erase(it);
-				delete objectToDelete;
-			}
-		}
+		UpdateObjects(objects);
+		CollisionCheck(objects);
+		RemoveUnseen(objects);
 
 		SDL_RenderPresent(pRenderer);
-
-		SDL_Delay(CONST_FRAME_DELAY);	
+		SDL_Delay(CONST_PHYSICS_DELAY);	
 	}
 	
 	// Clear allocated memory
