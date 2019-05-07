@@ -19,6 +19,8 @@
 #define G 9.81
 #define GRAVITY_SCALE 0.1
 
+#define DEBUG False
+
 SDL_Renderer* pRenderer = NULL;
 
 #pragma region Math functions
@@ -36,46 +38,28 @@ Vector2 Normalize(Vector2 input)
 
 bool CheckAABBCollision(Object* first, Object* second)
 {
-	/*std::cout << "First aabb pos: " << first->GetBox().pos.x << " " << first->GetBox().pos.y << std::endl;
-	std::cout << "First aabb size: " << first->GetBox().size.x << " " << first->GetBox().size.y << std::endl;*/
-
+#if DEBUG
 	Vector2 firstMax = first->GetBox().pos + first->GetBox().size;
-
-	/*std::cout << "First max: " << firstMax.x << " " << firstMax.y << std::endl;*/
-
 	Vector2 secondMax = second->GetBox().pos + second->GetBox().size;
 	Vector2 firstMin = first->GetBox().pos;
-
-	/*std::cout << "First min: " << firstMin.x << " " << firstMin.y << std::endl;*/
-
 	Vector2 secondMin = second->GetBox().pos;
-
-
-	//if (firstMax.x > secondMin.x && firstMax.y > secondMin.y)
-	//{
-	//	std::cout << "FirstMax.x: " << firstMax.x << ", " << "SecondMin.x: " << secondMin.x << ", " << "FirstMax.y: " << firstMax.y << ", " << "SecondMin.y:" << secondMin.y << std::endl;
-
-	//	std::cout << "First type of collision happened!" << std::endl;
-	//}
-
-	//if (firstMin.x < secondMax.x && firstMin.y < secondMax.y)
-	//{
-	//	std::cout << "Second type of collision happened!" << std::endl;
-	//}
+	std::cout << "First aabb pos: " << first->GetBox().pos.x << " " << first->GetBox().pos.y << std::endl;
+	std::cout << "First aabb size: " << first->GetBox().size.x << " " << first->GetBox().size.y << std::endl;
+	std::cout << "First max: " << firstMax.x << " " << firstMax.y << std::endl;
+	std::cout << "First min: " << firstMin.x << " " << firstMin.y << std::endl;
+	std::cout << "Second aabb pos: " << second->GetBox().pos.x << " " << second->GetBox().pos.y << std::endl;
+	std::cout << "Second aabb size: " << second->GetBox().size.x << " " << second->GetBox().size.y << std::endl;
+	std::cout << "Second max: " << secondMax.x << " " << secondMax.y << std::endl;
+	std::cout << "Second min: " << secondMin.x << " " << secondMin.y << std::endl;
+#endif
 
 	if (first->GetBox().pos.x < second->GetBox().pos.x + second->GetBox().size.x &&
 		first->GetBox().pos.x + first->GetBox().size.x > second->GetBox().pos.x &&
 		first->GetBox().pos.y < second->GetBox().pos.y + second->GetBox().size.y &&
 		first->GetBox().pos.y + first->GetBox().size.y > second->GetBox().pos.y)
 	{
-		//std::cout << "END OF METHOD\n\n" << std::endl;
 		return true;
 	}
-
-	//if (/*(firstMax.x > secondMin.x && firstMax.y > secondMin.y) || */(firstMin.x < secondMax.x && firstMin.y < secondMax.y))
-	//{
-
-	//}
 
 	return false;
 }
@@ -214,6 +198,8 @@ int main(int argc, char * argv[])
 		// Check for collisions
 		for (int i = 0; i < objects.size(); i++)
 		{
+			// The j = i+1 prevents us from checking the same objects for collisions several times per frame
+			// LINK: https://gamedev.stackexchange.com/a/24289 
 			for (int j = i+1; j < objects.size(); j++)
 			{
 				// If index is same, don't check for collisions with self
