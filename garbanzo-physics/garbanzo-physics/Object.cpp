@@ -16,8 +16,9 @@ Object::Object(SDL_Rect rect, Vector2 p, RGB col, float m, Vector2 f, Vector2 ve
 	torque = torq;
 	restitution = e;
 
-	box.pos = p;
-	box.size = Vector2(rect.w, rect.h);
+	box.size = Vector2(rect.w/2, rect.h/2);
+	box.pos = pos;
+
 
 	SetPos(p.x, p.y);
 }

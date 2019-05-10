@@ -127,7 +127,18 @@ void UpdateObjects(std::vector<Object*> &objects)
 	{
 		SDL_SetRenderDrawColor(pRenderer, object->GetColor().r, object->GetColor().g, object->GetColor().b, object->GetColor().a);
 		object->UpdatePos(object->GetPos().x + object->GetVelocity().x, object->GetPos().y + (G*GRAVITY_SCALE*object->GetMass()) + object->GetVelocity().y);
+#if DEBUG
+		// Top left to top right
+		SDL_RenderDrawLine(pRenderer, object->GetBox().pos.x, object->GetBox().pos.y, object->GetBox().pos.x + object->GetBox().size.x, object->GetBox().pos.y);
+		// Top left to bottom left
+		SDL_RenderDrawLine(pRenderer, object->GetBox().pos.x, object->GetBox().pos.y, object->GetBox().pos.x, object->GetBox().pos.y + object->GetBox().size.y);
+		// Bottom left to bottom right
+		SDL_RenderDrawLine(pRenderer, object->GetBox().pos.x, object->GetBox().pos.y + object->GetBox().size.y, object->GetBox().pos.x + object->GetBox().size.x, object->GetBox().pos.y + object->GetBox().size.y);
+		// Top right to bottom right
+		SDL_RenderDrawLine(pRenderer, object->GetBox().pos.x + object->GetBox().size.x, object->GetBox().pos.y, object->GetBox().pos.x + object->GetBox().size.x, object->GetBox().pos.y + object->GetBox().size.y);
+#else
 		SDL_RenderFillRect(pRenderer, &object->GetRect());
+#endif
 	}
 }
 
@@ -141,20 +152,28 @@ void CreateObject(std::vector<Object*> &objects)
 	std::uniform_int_distribution<int> size_dist(RECT_MIN_SIZE, RECT_MAX_SIZE);
 	std::uniform_real_distribution<float> pos_dist(RECT_MIN_X, RECT_MAX_X);
 	std::uniform_real_distribution<float> mass_dist(MASS_MIN, MASS_MAX);
+	std::uniform_int_distribution<int> color_1(0, 255);
+	std::uniform_int_distribution<int> color_2(0, 255);
+	std::uniform_int_distribution<int> color_3(0, 255);
+
 
 	// Create object
 	int size_rand = size_dist(generator);
 	float pos_rand = pos_dist(generator);
 	float mass_rand = mass_dist(generator);
+	int color_1_rand = color_1(generator);
+	int color_2_rand = color_2(generator);
+	int color_3_rand = color_3(generator);
+
 	SDL_Rect r;
 
 	// Set some defaults for rect, otherwise SDL cofetime for in go insane
 	r.x = r.y = 0;
 	r.w = r.h = size_rand;
 
-	RGB color = RGB(0, 255, 255, 255);
+	RGB color = RGB(color_1_rand, color_2_rand, color_3_rand, 255);
 	Vector2 pos = Vector2(pos_rand, RECT_Y);
-	Object* object = new Object(r, pos, color, mass_rand, 1.f);
+	Object* object = new Object(r, pos, color, mass_rand, Vector2(0,0), Vector2(0,0), 0.f, 0.f, 0.f, 0.f, 1.f);
 	objects.push_back(object);
 }
 
@@ -233,6 +252,7 @@ int main(int argc, char * argv[])
 	SDL_Event e;
 	bool quit = false;
 
+	int counter = 0;
 
  	while (!quit)
 	{
@@ -248,6 +268,10 @@ int main(int argc, char * argv[])
 				CreateObject(objects);
 			}
 		}
+		if (counter % 10 == 0)
+		{
+			CreateObject(objects);
+		}
 
 		// Set background color 
 		SDL_SetRenderDrawColor(pRenderer, 0, 0, 0, 255);
@@ -259,6 +283,7 @@ int main(int argc, char * argv[])
 
 		SDL_RenderPresent(pRenderer);
 		SDL_Delay(CONST_PHYSICS_DELAY);	
+		counter++;
 	}
 	
 	// Clear allocated memory
