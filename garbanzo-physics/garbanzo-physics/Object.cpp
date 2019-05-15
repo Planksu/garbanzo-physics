@@ -1,26 +1,17 @@
 #include "Object.h"
 
 
-
-Object::Object(SDL_Rect rect, Vector2 p, RGB col, float m, Vector2 f, Vector2 vel, float a, float o, float angVel, float torq, float e)
+Object::Object(Rigidbody* rigidbody, RGB col, Vector2 size)
 {
-	r = rect;
-	pos = p;
+	rb = rigidbody;
 	color = col;
-	mass = m;
-	force = f;
-	velocity = vel;
-	acceleration = a;
-	orientation = o;
-	angularVelocity = angVel;
-	torque = torq;
-	restitution = e;
 
-	box.size = Vector2(rect.w/2, rect.h/2);
-	box.pos = pos;
+	box.size = size;
+	// Box position is top left corner
+	box.pos.x = rb->position.x - size.x / 2;
+	box.pos.y = rb->position.y - size.y / 2;
 
-
-	SetPos(p.x, p.y);
+	SetPos(rb->position.x, rb->position.y);
 }
 
 
@@ -34,7 +25,7 @@ void Object::SetColor(RGB newColor)
 }
 
 
-void Object::UpdatePos(float newX, float newY)
+void Object::UpdatePos()
 {
-	SetPos(newX, newY);
+	SetPos(rb->position.x, rb->position.y);
 }
