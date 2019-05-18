@@ -20,10 +20,11 @@ public:
 	Vector2 force;
 	float mass;
 	float restitution;
-	float inertia;
+	float momentOfInertia;
 
 	Rigidbody(Vector2 pos, Vector2 vel, float a, float o, float angVel, float t, float m, float e, float i);
 	~Rigidbody();
+
 
 
 };

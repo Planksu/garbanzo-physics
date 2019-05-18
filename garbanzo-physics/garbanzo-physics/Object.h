@@ -4,12 +4,16 @@
 #include "Vector2.h"
 #include "RGB.h"
 #include "Rigidbody.h"
+#include <vector>
 #include <SDL.h>
 
 // AABB struct using min as lower left corner and max as top right corner
 struct AABB
 {
-	Vector2 pos;
+	Vector2 topLeft;
+	Vector2 topRight;
+	Vector2 bottomLeft;
+	Vector2 bottomRight;
 	Vector2 size;
 };
 
@@ -18,17 +22,6 @@ class Object
 private:
 	RGB color;
 	AABB box;
-
-	void SetPos(float x, float y)
-	{
-		// Update rigidbody coordinates
-		rb->position.x = x;
-		rb->position.y = y;
-
-		// Box position is top left corner
-		box.pos.x = rb->position.x - box.size.x / 2;
-		box.pos.y = rb->position.y - box.size.y / 2;
-	}
 
 public:
 	Object(Rigidbody* rb, RGB col, Vector2 size);
@@ -41,13 +34,14 @@ public:
 
 
 	void SetColor(RGB newColor);
-	void SetVelocity(Vector2 newVel)
-	{
-		rb->velocity = newVel;
-	}
-	void UpdatePos(float newX, float newY);
-	void UpdatePos();
 
+	void CalculateMomentOfInertia()
+	{
+		rb->momentOfInertia = rb->mass * (box.size.x * box.size.x + box.size.y * box.size.y) / 12;
+	}
+
+	void UpdateRotation();
+	void UpdateBoxPos();
 };
 
 #endif

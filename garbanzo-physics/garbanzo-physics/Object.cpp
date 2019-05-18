@@ -7,11 +7,10 @@ Object::Object(Rigidbody* rigidbody, RGB col, Vector2 size)
 	color = col;
 
 	box.size = size;
-	// Box position is top left corner
-	box.pos.x = rb->position.x - size.x / 2;
-	box.pos.y = rb->position.y - size.y / 2;
+	UpdateBoxPos();
 
-	SetPos(rb->position.x, rb->position.y);
+	// Since the rigidbody values have been given, calculate moment of inertia
+	CalculateMomentOfInertia();
 }
 
 
@@ -25,7 +24,49 @@ void Object::SetColor(RGB newColor)
 }
 
 
-void Object::UpdatePos()
+void Object::UpdateRotation()
 {
-	SetPos(rb->position.x, rb->position.y);
+	float s = sin(rb->orientation);
+	float c = cos(rb->orientation);
+
+	std::vector<Vector2> corners;
+
+
+	corners.push_back(box.topLeft);
+	corners.push_back(box.topRight);
+	corners.push_back(box.bottomLeft);
+	corners.push_back(box.bottomRight);
+
+	// Rotate all four corners
+	for (size_t i = 0; i < corners.size(); i++)
+	{
+		// Translate corner to origin
+		corners[i].x -= rb->position.x;
+		corners[i].y -= rb->position.y;
+
+		float xNew = corners[i].x * c - corners[i].y * s;
+		float yNew = corners[i].x * s + corners[i].y * c;
+
+		// Translate back and update coordinates
+		corners[i].x = xNew + rb->position.x;
+		corners[i].y = yNew + rb->position.y;
+	}
+
+	box.topLeft = corners[0];
+	box.topRight = corners[1];
+	box.bottomLeft = corners[2];
+	box.bottomRight = corners[3];
+
+}
+
+void Object::UpdateBoxPos()
+{
+	box.topLeft.x = rb->position.x - box.size.x / 2;
+	box.topLeft.y = rb->position.y - box.size.y / 2;
+	box.topRight.x = rb->position.x + box.size.x / 2;
+	box.topRight.y = rb->position.y - box.size.y / 2;
+	box.bottomLeft.x = rb->position.x - box.size.x / 2;
+	box.bottomLeft.y = rb->position.y + box.size.y / 2;
+	box.bottomRight.x = rb->position.x + box.size.x / 2;
+	box.bottomRight.y = rb->position.y + box.size.y / 2;
 }

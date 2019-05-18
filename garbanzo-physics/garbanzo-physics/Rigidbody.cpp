@@ -20,7 +20,7 @@ Rigidbody::Rigidbody(	Vector2 pos,
 	torque = t;
 	mass = m;
 	restitution = e;
-	inertia = i;
+	momentOfInertia = i;
 	force = Vector2(0, 0);
 }
 

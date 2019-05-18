@@ -6,7 +6,7 @@
 #include "Object.h"
 
 // 180 times per second = 5.555ms
-#define CONST_PHYSICS_DELAY 8.33
+#define CONST_PHYSICS_DELAY 5.55
 
 // Window variables
 #define WIDTH 1920
@@ -18,10 +18,10 @@
 #define RECT_MAX_X WIDTH
 #define RECT_Y -10
 #define MASS_MIN 1
-#define MASS_MAX 1
+#define MASS_MAX 5
 
 #define G 9.81
-#define GRAVITY_SCALE 0.0005
+#define GRAVITY_SCALE 1
 
 #define DEBUG
 //#define DEBUG_EXTENSIVE
@@ -76,10 +76,10 @@ bool CheckAABBCollision(Object* first, Object* second)
 	std::cout << "Second min: " << secondMin.x << " " << secondMin.y << std::endl;
 #endif
 
-	if (first->GetBox().pos.x < second->GetBox().pos.x + second->GetBox().size.x &&
-		first->GetBox().pos.x + first->GetBox().size.x > second->GetBox().pos.x &&
-		first->GetBox().pos.y < second->GetBox().pos.y + second->GetBox().size.y &&
-		first->GetBox().pos.y + first->GetBox().size.y > second->GetBox().pos.y)
+	if (first->GetBox().topLeft.x < second->GetBox().topLeft.x + second->GetBox().size.x &&
+		first->GetBox().topLeft.x + first->GetBox().size.x > second->GetBox().topLeft.x &&
+		first->GetBox().topLeft.y < second->GetBox().topLeft.y + second->GetBox().size.y &&
+		first->GetBox().topLeft.y + first->GetBox().size.y > second->GetBox().topLeft.y)
 	{
 		return true;
 	}
@@ -89,6 +89,18 @@ bool CheckAABBCollision(Object* first, Object* second)
 
 void ResolveCollision(Object* a, Object* b)
 {
+	// Linear part
+	float aMass;
+	float bMass;
+	if (a->rb->mass > 0)
+		aMass = a->rb->mass;
+	else
+		aMass = 10000;
+
+	if (b->rb->mass > 0)
+		bMass = b->rb->mass;
+	else
+		bMass = 10000;
 
 	Vector2 ab = b->rb->velocity - a->rb->velocity;
 
@@ -108,19 +120,38 @@ void ResolveCollision(Object* a, Object* b)
 	Vector2 r = Vector2(a->rb->position);
 	Vector2 p = r + Vector2(0, 1) * dx + Vector2(1, 0)*dy;
 
-	Vector2 collision_norm = Normalize(b->rb->position - p);
+	Vector2 normal = Normalize(b->rb->position - p);
+
+	float contactVel = DotProduct(ab, normal);
+
+	if (contactVel > 0)
+		return;
 
 	float e = fmin(a->rb->restitution, b->rb->restitution);
+	float j = -(1.0f + e) * contactVel;
+	j /= 1 / aMass + 1 / bMass;
+
+	Vector2 impulse = normal * j;
+	a->rb->velocity = a->rb->velocity - impulse * (1 / aMass);
+	b->rb->velocity = b->rb->velocity + impulse * (1 / bMass);
 
 
-#if defined DEBUG
+
+	//float e = fmin(a->rb->restitution, b->rb->restitution);
+
+	//a->rb->velocity = a->rb->velocity + (collision_norm * -1.f * e);
+	//b->rb->velocity = b->rb->velocity + (collision_norm * e);
+
+#if defined DEBUG_EXTENSIVE
 	Vector2 startPoint = a->rb->position;
-	Vector2 endPoint = startPoint + collision_norm * 500;
+	Vector2 endPoint = startPoint + normal * 500;
 	SDL_RenderDrawLine(pRenderer, startPoint.x, startPoint.y, endPoint.x, endPoint.y);
 #endif
 
-	a->rb->velocity = a->rb->velocity + (collision_norm * -1.f * e);
-	b->rb->velocity = b->rb->velocity + (collision_norm * e);
+	// Angular part
+	Vector2 angR = b->rb->position - a->rb->position;
+	a->rb->torque = angR.x * a->rb->force.y - angR.y * a->rb->force.x;
+	b->rb->torque = angR.x * b->rb->force.y - angR.y * b->rb->force.x;
 }
 #pragma endregion
 
@@ -133,12 +164,16 @@ void UpdateObjects(std::vector<Object*> &objects)
 		// If the objects mass is set to 0, consider it as infinite mass and don't update
 		if (object->rb->mass > 0.f)
 		{
+			//object->rb->orientation += 0.015f;
 			// Add the gravity vector to force
 			object->rb->force = object->rb->force + Vector2(0.f, G*GRAVITY_SCALE*object->rb->mass);
-			object->rb->velocity = object->rb->velocity + object->rb->force * (1.0f / object->rb->mass + G);
-			object->rb->position = object->rb->position + object->rb->velocity;
+			object->rb->velocity = object->rb->velocity + object->rb->force * (1.0f / object->rb->mass + G) * (CONST_PHYSICS_DELAY / 1000);
+			object->rb->position = object->rb->position + object->rb->velocity * (CONST_PHYSICS_DELAY / 1000);
+			object->rb->angularVelocity += object->rb->torque / object->rb->momentOfInertia;
+			object->rb->orientation += object->rb->angularVelocity;
 
-			object->UpdatePos();
+			object->UpdateBoxPos();
+			object->UpdateRotation();
 
 #if defined DEBUG_EXTENSIVE
 			std::cout << "Objects force: " << object->rb->force.x << ", " << object->rb->force.y << std::endl;
@@ -147,14 +182,11 @@ void UpdateObjects(std::vector<Object*> &objects)
 #endif
 
 #if defined DEBUG
-			// Top left to top right
-			SDL_RenderDrawLine(pRenderer, object->GetBox().pos.x, object->GetBox().pos.y, object->GetBox().pos.x + object->GetBox().size.x, object->GetBox().pos.y);
-			// Top left to bottom left
-			SDL_RenderDrawLine(pRenderer, object->GetBox().pos.x, object->GetBox().pos.y, object->GetBox().pos.x, object->GetBox().pos.y + object->GetBox().size.y);
-			// Bottom left to bottom right
-			SDL_RenderDrawLine(pRenderer, object->GetBox().pos.x, object->GetBox().pos.y + object->GetBox().size.y, object->GetBox().pos.x + object->GetBox().size.x, object->GetBox().pos.y + object->GetBox().size.y);
-			// Top right to bottom right
-			SDL_RenderDrawLine(pRenderer, object->GetBox().pos.x + object->GetBox().size.x, object->GetBox().pos.y, object->GetBox().pos.x + object->GetBox().size.x, object->GetBox().pos.y + object->GetBox().size.y);
+			Object* o = object;
+			SDL_RenderDrawLine(pRenderer, o->GetBox().topLeft.x, o->GetBox().topLeft.y, o->GetBox().topRight.x, o->GetBox().topRight.y);
+			SDL_RenderDrawLine(pRenderer, o->GetBox().topLeft.x, o->GetBox().topLeft.y, o->GetBox().bottomLeft.x, o->GetBox().bottomLeft.y);
+			SDL_RenderDrawLine(pRenderer, o->GetBox().bottomLeft.x, o->GetBox().bottomLeft.y, o->GetBox().bottomRight.x, o->GetBox().bottomRight.y);
+			SDL_RenderDrawLine(pRenderer, o->GetBox().topRight.x, o->GetBox().topRight.y, o->GetBox().bottomRight.x, o->GetBox().bottomRight.y);
 #else
 			SDL_RenderFillRect(pRenderer, &object->GetRect());
 #endif
@@ -165,13 +197,13 @@ void UpdateObjects(std::vector<Object*> &objects)
 		{
 #if defined DEBUG
 			// Top left to top right
-			SDL_RenderDrawLine(pRenderer, object->GetBox().pos.x, object->GetBox().pos.y, object->GetBox().pos.x + object->GetBox().size.x, object->GetBox().pos.y);
+			SDL_RenderDrawLine(pRenderer, object->GetBox().topLeft.x, object->GetBox().topLeft.y, object->GetBox().topLeft.x + object->GetBox().size.x, object->GetBox().topLeft.y);
 			// Top left to bottom left
-			SDL_RenderDrawLine(pRenderer, object->GetBox().pos.x, object->GetBox().pos.y, object->GetBox().pos.x, object->GetBox().pos.y + object->GetBox().size.y);
+			SDL_RenderDrawLine(pRenderer, object->GetBox().topLeft.x, object->GetBox().topLeft.y, object->GetBox().topLeft.x, object->GetBox().topLeft.y + object->GetBox().size.y);
 			// Bottom left to bottom right
-			SDL_RenderDrawLine(pRenderer, object->GetBox().pos.x, object->GetBox().pos.y + object->GetBox().size.y, object->GetBox().pos.x + object->GetBox().size.x, object->GetBox().pos.y + object->GetBox().size.y);
+			SDL_RenderDrawLine(pRenderer, object->GetBox().topLeft.x, object->GetBox().topLeft.y + object->GetBox().size.y, object->GetBox().topLeft.x + object->GetBox().size.x, object->GetBox().topLeft.y + object->GetBox().size.y);
 			// Top right to bottom right
-			SDL_RenderDrawLine(pRenderer, object->GetBox().pos.x + object->GetBox().size.x, object->GetBox().pos.y, object->GetBox().pos.x + object->GetBox().size.x, object->GetBox().pos.y + object->GetBox().size.y);
+			SDL_RenderDrawLine(pRenderer, object->GetBox().topLeft.x + object->GetBox().size.x, object->GetBox().topLeft.y, object->GetBox().topLeft.x + object->GetBox().size.x, object->GetBox().topLeft.y + object->GetBox().size.y);
 #else
 			SDL_RenderFillRect(pRenderer, &object->GetRect());
 #endif
@@ -204,7 +236,7 @@ void CreateObject(std::vector<Object*> &objects)
 
 	RGB color = RGB(color_1_rand, color_2_rand, color_3_rand, 255);
 	Vector2 pos = Vector2(pos_rand, RECT_Y);
-	Rigidbody* rb = new Rigidbody(pos, Vector2(0, 0), 0.f, 0.f, 0.f, 0.f, mass_rand, 1.f, 0.f);
+	Rigidbody* rb = new Rigidbody(pos, Vector2(0, 0), 0.f, 0.f, 0.f, 0.f, mass_rand, 0.6f, 0.f);
 	Object* object = new Object(rb, color, Vector2(size_rand, size_rand));
 	objects.push_back(object);
 }
@@ -270,7 +302,7 @@ int main(int argc, char * argv[])
 	// Create renderer
 	pRenderer = SDL_CreateRenderer(	pWindow,
 									-1,	
-									SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+									SDL_RENDERER_ACCELERATED);
 
 
 
@@ -286,12 +318,13 @@ int main(int argc, char * argv[])
 
 	int counter = 0;
 
+	// FLOOR
 	for (size_t i = 1; i < 52; i++)
 	{
 		RGB color = RGB(255, 255, 255, 255);
 		float widthChange = WIDTH / 50;
 		Vector2 pos = Vector2(widthChange * i - widthChange/2, HEIGHT - 250 + 250 / 2);
-		Rigidbody* rb = new Rigidbody(pos, Vector2(0, 0), 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f);
+		Rigidbody* rb = new Rigidbody(pos, Vector2(0, 0), 0.f, 0.f, 0.f, 0.f, 0.f, 0.6f, 0.f);
 		Object* object = new Object(rb, color, Vector2(widthChange, 250));
 		objects.push_back(object);
 	}
@@ -311,10 +344,10 @@ int main(int argc, char * argv[])
 				CreateObject(objects);
 			}
 		}
-		//if (counter % 25 == 0)
-		//{
-		//	CreateObject(objects);
-		//}
+		if (counter % 100 == 0)
+		{
+			CreateObject(objects);
+		}
 
 		// Set background color 
 		SDL_SetRenderDrawColor(pRenderer, 0, 0, 0, 255);
