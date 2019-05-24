@@ -14,6 +14,8 @@ struct AABB
 	Vector2 topRight;
 	Vector2 bottomLeft;
 	Vector2 bottomRight;
+	Vector2 topNormal;
+	Vector2 leftNormal;
 	Vector2 size;
 };
 

@@ -61,21 +61,6 @@ Vector2 CrossProduct(float s, Vector2 first)
 #pragma region Collision methods
 bool CheckAABBCollision(Object* first, Object* second)
 {
-#if defined DEBUG_EXTENSIVE
-	Vector2 firstMax = first->GetBox().pos + first->GetBox().size;
-	Vector2 secondMax = second->GetBox().pos + second->GetBox().size;
-	Vector2 firstMin = first->GetBox().pos;
-	Vector2 secondMin = second->GetBox().pos;
-	std::cout << "First aabb pos: " << first->GetBox().pos.x << " " << first->GetBox().pos.y << std::endl;
-	std::cout << "First aabb size: " << first->GetBox().size.x << " " << first->GetBox().size.y << std::endl;
-	std::cout << "First max: " << firstMax.x << " " << firstMax.y << std::endl;
-	std::cout << "First min: " << firstMin.x << " " << firstMin.y << std::endl;
-	std::cout << "Second aabb pos: " << second->GetBox().pos.x << " " << second->GetBox().pos.y << std::endl;
-	std::cout << "Second aabb size: " << second->GetBox().size.x << " " << second->GetBox().size.y << std::endl;
-	std::cout << "Second max: " << secondMax.x << " " << secondMax.y << std::endl;
-	std::cout << "Second min: " << secondMin.x << " " << secondMin.y << std::endl;
-#endif
-
 	if (first->GetBox().topLeft.x < second->GetBox().topLeft.x + second->GetBox().size.x &&
 		first->GetBox().topLeft.x + first->GetBox().size.x > second->GetBox().topLeft.x &&
 		first->GetBox().topLeft.y < second->GetBox().topLeft.y + second->GetBox().size.y &&
@@ -87,11 +72,182 @@ bool CheckAABBCollision(Object* first, Object* second)
 	return false;
 }
 
+Vector2 projectOnAxis(std::vector<Vector2> vertices, const Vector2& axis)
+{
+	float min = std::numeric_limits<float>::infinity();
+	float max = -std::numeric_limits<float>::infinity();
+	for (auto& vertex : vertices) 
+	{
+		float projection = DotProduct(vertex, axis);
+		if (projection < min) 
+		{ 
+			min = projection;
+		}
+		if (projection > max) 
+		{ 
+			max = projection;
+		}
+	}
+	return Vector2(min, max);
+}
+
+Vector2 project(Vector2 pos, Vector2 axis)
+{
+	float total = pos.x * axis.x + pos.y * axis.y;
+	total = total / (axis.x * axis.x + axis.y * axis.y);
+	return Vector2(axis.x * total, axis.y * total);
+}
+
+bool CheckSatCollision(Object* first, Object* second)
+{
+	std::vector<Vector2> firstCorners;
+	
+	firstCorners.push_back(Vector2(first->GetBox().topLeft.x, first->GetBox().topLeft.y));
+	firstCorners.push_back(Vector2(first->GetBox().topRight.x, first->GetBox().topRight.y));
+	firstCorners.push_back(Vector2(first->GetBox().bottomRight.x, first->GetBox().bottomRight.y));
+	firstCorners.push_back(Vector2(first->GetBox().bottomLeft.x, first->GetBox().bottomLeft.y));
+
+
+	std::vector<Vector2> secondCorners;
+	secondCorners.push_back(Vector2(second->GetBox().topLeft.x, second->GetBox().topLeft.y));
+	secondCorners.push_back(Vector2(second->GetBox().topRight.x, second->GetBox().topRight.y));
+	secondCorners.push_back(Vector2(second->GetBox().bottomRight.x, second->GetBox().bottomRight.y));
+	secondCorners.push_back(Vector2(second->GetBox().bottomLeft.x, second->GetBox().bottomLeft.y));
+
+	std::vector<Vector2> axis;
+
+	SDL_SetRenderDrawColor(pRenderer, 255, 255, 255, 255);
+
+	Vector2 firstAxis = first->rb->position - first->GetBox().topNormal;
+	Vector2 secondAxis = first->rb->position - first->GetBox().leftNormal;
+	Vector2 thirdAxis = second->rb->position - second->GetBox().topNormal;
+	Vector2 fourthAxis = second->rb->position - second->GetBox().leftNormal;
+	SDL_RenderDrawLine(pRenderer, first->rb->position.x, first->rb->position.y, first->rb->position.x - firstAxis.x, first->rb->position.y - firstAxis.y);
+	SDL_RenderDrawLine(pRenderer, first->rb->position.x, first->rb->position.y, first->rb->position.x - secondAxis.x, first->rb->position.y - secondAxis.y);
+	SDL_RenderDrawLine(pRenderer, second->rb->position.x, second->rb->position.y, second->rb->position.x - thirdAxis.x, second->rb->position.y - thirdAxis.y);
+	SDL_RenderDrawLine(pRenderer, second->rb->position.x, second->rb->position.y, second->rb->position.x - fourthAxis.x, second->rb->position.y - fourthAxis.y);
+
+
+	axis.push_back(Normalize(Vector2(firstAxis.x, firstAxis.y)));
+	axis.push_back(Normalize(Vector2(secondAxis.x, secondAxis.y)));
+	axis.push_back(Normalize(Vector2(thirdAxis.x, thirdAxis.y)));
+	axis.push_back(Normalize(Vector2(fourthAxis.x, fourthAxis.y)));
+
+	//axis.push_back(Normalize(firstCorners[0] - firstCorners[1]).getNormal());
+	//axis.push_back(Normalize(firstCorners[0] - firstCorners[3]).getNormal());
+	//axis.push_back(Normalize(secondCorners[0] - secondCorners[1]).getNormal());
+	//axis.push_back(Normalize(secondCorners[0] - secondCorners[3]).getNormal());
+
+
+
+	for (size_t i = 0; i < axis.size(); i++)
+	{
+		float aMin = std::numeric_limits<float>::infinity();
+		float aMax = -std::numeric_limits<float>::infinity();
+		float bMin = std::numeric_limits<float>::infinity();
+		float bMax = -std::numeric_limits<float>::infinity();
+
+		for (size_t j = 0; j < firstCorners.size(); j++)
+		{
+			Vector2 res = project(firstCorners[j], axis[i]);
+			float result = DotProduct(axis[i], firstCorners[j]);
+			if (result > aMax)
+				aMax = result;
+			if (result < aMin)
+				aMin = result;
+		}
+		for (size_t j = 0; j < secondCorners.size(); j++)
+		{
+			Vector2 res = project(secondCorners[j], axis[i]);
+			float result = DotProduct(axis[i], secondCorners[j]);
+			if (result > bMax)
+				bMax = result;
+			if (result < bMin)
+				bMin = result;
+		}
+
+		if (bMin > aMax || bMax < aMin)
+		{
+			return false;
+		}
+
+	}
+	return true;
+}
+
+//bool CheckSATCollision(Object* first, Object* second)
+//{
+//	std::vector<Vector2> firstCorners;
+//	firstCorners.push_back(first->GetBox().bottomLeft);
+//	firstCorners.push_back(first->GetBox().topLeft);
+//	firstCorners.push_back(first->GetBox().topRight);
+//	firstCorners.push_back(first->GetBox().bottomRight);
+//
+//
+//	std::vector<Vector2> secondCorners;
+//	secondCorners.push_back(second->GetBox().bottomLeft);
+//	secondCorners.push_back(second->GetBox().topLeft);
+//	secondCorners.push_back(second->GetBox().topRight);
+//	secondCorners.push_back(second->GetBox().bottomRight);
+//
+//	// Go through all the corners of first object
+//	for (size_t i = 0; i < firstCorners.size(); i++)
+//	{
+//		Vector2 current = firstCorners[i];
+//		Vector2 next = firstCorners[(i + 1) % firstCorners.size()];
+//		Vector2 edge = next - current;
+//		edge = Normalize(edge);
+//
+//		// Get the perpendicular of this
+//		Vector2 axis = edge.getNormal();
+//
+//		float aMaxProj = -std::numeric_limits<float>::infinity();
+//		float aMinProj = std::numeric_limits<float>::infinity();
+//		float bMaxProj = -std::numeric_limits<float>::infinity();
+//		float bMinProj = std::numeric_limits<float>::infinity();
+//
+//
+//		for (size_t j = 0; j < firstCorners.size(); j++)
+//		{
+//			float proj = DotProduct(axis, firstCorners[j]);
+//			if (proj < aMinProj)
+//				aMinProj = proj;
+//			if (proj > aMaxProj)
+//				aMaxProj = proj;
+//		}
+//
+//		for (size_t j = 0; j < secondCorners.size(); j++)
+//		{
+//			float proj = DotProduct(axis, secondCorners[j]);
+//			if (proj < bMinProj)
+//				bMinProj = proj;
+//			if (proj > bMaxProj)
+//				bMaxProj = proj;
+//		}
+//
+//		// Check if the intervals of both polygons projected on the axis overlap
+//		// If they don't, there exists an axis of separation and the given shapes can't overlap currently
+//
+//		//std::cout << "SAT values: " << aMaxProj << ", " << aMinProj << ", " << bMaxProj << ", " << bMinProj << std::endl;
+//
+//		if (aMinProj < bMaxProj && aMaxProj > bMinProj)
+//		{
+//			return true;
+//		}
+//	}
+//
+//	// If the check reaches this point, all of the axis' have been checked but no overlap was found
+//	// meaning that the shapes are not intersecting
+//	return false;
+//}
+
 void ResolveCollision(Object* a, Object* b)
 {
 	// Linear part
 	float aMass;
 	float bMass;
+
+	// Check if the mass is 0, if it is the mass is to be considered infinite
 	if (a->rb->mass > 0)
 		aMass = a->rb->mass;
 	else
@@ -122,10 +278,15 @@ void ResolveCollision(Object* a, Object* b)
 
 	Vector2 normal = Normalize(b->rb->position - p);
 
+	SDL_SetRenderDrawColor(pRenderer, 0, 255, 255, 255);
 	float contactVel = DotProduct(ab, normal);
 
 	if (contactVel > 0)
 		return;
+
+	Vector2 startPoint = a->rb->position;
+	Vector2 endPoint = startPoint + normal * 500;
+	SDL_RenderDrawLine(pRenderer, startPoint.x, startPoint.y, endPoint.x, endPoint.y);
 
 	float e = fmin(a->rb->restitution, b->rb->restitution);
 	float j = -(1.0f + e) * contactVel;
@@ -138,22 +299,43 @@ void ResolveCollision(Object* a, Object* b)
 
 
 	//float e = fmin(a->rb->restitution, b->rb->restitution);
-
 	//a->rb->velocity = a->rb->velocity + (collision_norm * -1.f * e);
 	//b->rb->velocity = b->rb->velocity + (collision_norm * e);
 
-#if defined DEBUG_EXTENSIVE
-	Vector2 startPoint = a->rb->position;
-	Vector2 endPoint = startPoint + normal * 500;
-	SDL_RenderDrawLine(pRenderer, startPoint.x, startPoint.y, endPoint.x, endPoint.y);
-#endif
 
+	
 	// Angular part
-	Vector2 angR = b->rb->position - a->rb->position;
-	a->rb->torque = angR.x * a->rb->force.y - angR.y * a->rb->force.x;
-	b->rb->torque = angR.x * b->rb->force.y - angR.y * b->rb->force.x;
+
+	// Rough estimation of the "arm" vectors by getting vector from one object to another and dividing it by two
+	Vector2 bToA = (b->rb->position - a->rb->position) / 2;
+	Vector2 aToB = (a->rb->position - b->rb->position) / 2;
+	a->rb->torque = aToB.x * a->rb->force.y - aToB.y * a->rb->force.x;
+	b->rb->torque = bToA.x * b->rb->force.y - bToA.y * b->rb->force.x;
+	//std::cout << "Force of object a: " << a->rb->force.x << ", " << a->rb->force.y << std::endl;
+	//std::cout << "Force of object b: " << b->rb->force.x << ", " << b->rb->force.y << std::endl;
+
 }
 #pragma endregion
+
+void DrawObject(Object* o)
+{
+	SDL_RenderDrawLine(pRenderer, o->GetBox().topLeft.x, o->GetBox().topLeft.y, o->GetBox().topRight.x, o->GetBox().topRight.y);
+	SDL_RenderDrawLine(pRenderer, o->GetBox().topLeft.x, o->GetBox().topLeft.y, o->GetBox().bottomLeft.x, o->GetBox().bottomLeft.y);
+	SDL_RenderDrawLine(pRenderer, o->GetBox().bottomLeft.x, o->GetBox().bottomLeft.y, o->GetBox().bottomRight.x, o->GetBox().bottomRight.y);
+	SDL_RenderDrawLine(pRenderer, o->GetBox().topRight.x, o->GetBox().topRight.y, o->GetBox().bottomRight.x, o->GetBox().bottomRight.y);
+}
+
+void CalculateForce(std::vector<Object*> &objects)
+{
+	for (auto& object : objects)
+	{
+		if (object->rb->mass > 0.f)
+		{
+			// Add the gravity vector to force
+			object->rb->force = object->rb->force + Vector2(0.f, G*GRAVITY_SCALE*object->rb->mass);
+		}
+	}
+}
 
 void UpdateObjects(std::vector<Object*> &objects)
 {
@@ -165,12 +347,10 @@ void UpdateObjects(std::vector<Object*> &objects)
 		if (object->rb->mass > 0.f)
 		{
 			//object->rb->orientation += 0.015f;
-			// Add the gravity vector to force
-			object->rb->force = object->rb->force + Vector2(0.f, G*GRAVITY_SCALE*object->rb->mass);
 			object->rb->velocity = object->rb->velocity + object->rb->force * (1.0f / object->rb->mass + G) * (CONST_PHYSICS_DELAY / 1000);
 			object->rb->position = object->rb->position + object->rb->velocity * (CONST_PHYSICS_DELAY / 1000);
-			object->rb->angularVelocity += object->rb->torque / object->rb->momentOfInertia;
-			object->rb->orientation += object->rb->angularVelocity;
+			object->rb->angularVelocity += object->rb->torque / object->rb->momentOfInertia * (CONST_PHYSICS_DELAY / 1000);
+			object->rb->orientation += object->rb->angularVelocity * (CONST_PHYSICS_DELAY / 1000);
 
 			object->UpdateBoxPos();
 			object->UpdateRotation();
@@ -179,35 +359,13 @@ void UpdateObjects(std::vector<Object*> &objects)
 			std::cout << "Objects force: " << object->rb->force.x << ", " << object->rb->force.y << std::endl;
 			std::cout << "Objects velocity: " << object->rb->velocity.x << ", " << object->rb->velocity.y << std::endl;
 			std::cout << "Objects position: " << object->rb->position.x << ", " << object->rb->position.y << std::endl;
-#endif
-
-#if defined DEBUG
-			Object* o = object;
-			SDL_RenderDrawLine(pRenderer, o->GetBox().topLeft.x, o->GetBox().topLeft.y, o->GetBox().topRight.x, o->GetBox().topRight.y);
-			SDL_RenderDrawLine(pRenderer, o->GetBox().topLeft.x, o->GetBox().topLeft.y, o->GetBox().bottomLeft.x, o->GetBox().bottomLeft.y);
-			SDL_RenderDrawLine(pRenderer, o->GetBox().bottomLeft.x, o->GetBox().bottomLeft.y, o->GetBox().bottomRight.x, o->GetBox().bottomRight.y);
-			SDL_RenderDrawLine(pRenderer, o->GetBox().topRight.x, o->GetBox().topRight.y, o->GetBox().bottomRight.x, o->GetBox().bottomRight.y);
-#else
-			SDL_RenderFillRect(pRenderer, &object->GetRect());
-#endif
-			// REMEMBER TO SET FORCE TO ZERO AFTER APPLYING IT ON THIS UPDATE CYCLE
-			object->rb->force = Vector2(0.f, 0.f);
-		}
-		else // Still draw objects that have infinite mass
-		{
-#if defined DEBUG
-			// Top left to top right
-			SDL_RenderDrawLine(pRenderer, object->GetBox().topLeft.x, object->GetBox().topLeft.y, object->GetBox().topLeft.x + object->GetBox().size.x, object->GetBox().topLeft.y);
-			// Top left to bottom left
-			SDL_RenderDrawLine(pRenderer, object->GetBox().topLeft.x, object->GetBox().topLeft.y, object->GetBox().topLeft.x, object->GetBox().topLeft.y + object->GetBox().size.y);
-			// Bottom left to bottom right
-			SDL_RenderDrawLine(pRenderer, object->GetBox().topLeft.x, object->GetBox().topLeft.y + object->GetBox().size.y, object->GetBox().topLeft.x + object->GetBox().size.x, object->GetBox().topLeft.y + object->GetBox().size.y);
-			// Top right to bottom right
-			SDL_RenderDrawLine(pRenderer, object->GetBox().topLeft.x + object->GetBox().size.x, object->GetBox().topLeft.y, object->GetBox().topLeft.x + object->GetBox().size.x, object->GetBox().topLeft.y + object->GetBox().size.y);
-#else
-			SDL_RenderFillRect(pRenderer, &object->GetRect());
+			std::cout << "Objects torque: " << object->rb->torque << std::endl;
+			std::cout << "Objects angularVelocity: " << object->rb->angularVelocity << std::endl;
+			std::cout << "Objects angle: " << object->rb->orientation << std::endl;
 #endif
 		}
+		// Draw the object
+		DrawObject(object);
 	}
 }
 
@@ -236,7 +394,15 @@ void CreateObject(std::vector<Object*> &objects)
 
 	RGB color = RGB(color_1_rand, color_2_rand, color_3_rand, 255);
 	Vector2 pos = Vector2(pos_rand, RECT_Y);
-	Rigidbody* rb = new Rigidbody(pos, Vector2(0, 0), 0.f, 0.f, 0.f, 0.f, mass_rand, 0.6f, 0.f);
+	Vector2 vel = Vector2(0, 0);
+	float accel = 0.f;
+	float orientation = 0.f;
+	float angVel = 0.f;
+	float torq = 0.f;
+	float restitution = 0.6f;
+	float inertia = 0.f;
+
+	Rigidbody* rb = new Rigidbody(pos, vel, accel, orientation, angVel, torq, mass_rand, restitution, inertia);
 	Object* object = new Object(rb, color, Vector2(size_rand, size_rand));
 	objects.push_back(object);
 }
@@ -253,7 +419,7 @@ void CollisionCheck(std::vector<Object*> &objects)
 			// If index is same, don't check for collisions with self
 			if (i != j)
 			{
-				if (CheckAABBCollision(objects[i], objects[j]))
+				if (CheckSatCollision(objects[i], objects[j]))
 				{
 					ResolveCollision(objects[i], objects[j]);
 				}
@@ -318,16 +484,28 @@ int main(int argc, char * argv[])
 
 	int counter = 0;
 
-	// FLOOR
-	for (size_t i = 1; i < 52; i++)
+	 //FLOOR
+	for (size_t i = 1; i < 27; i++)
 	{
 		RGB color = RGB(255, 255, 255, 255);
-		float widthChange = WIDTH / 50;
+		float widthChange = WIDTH / 25;
 		Vector2 pos = Vector2(widthChange * i - widthChange/2, HEIGHT - 250 + 250 / 2);
 		Rigidbody* rb = new Rigidbody(pos, Vector2(0, 0), 0.f, 0.f, 0.f, 0.f, 0.f, 0.6f, 0.f);
 		Object* object = new Object(rb, color, Vector2(widthChange, 250));
 		objects.push_back(object);
 	}
+
+	//RGB color = RGB(255, 255, 255, 255);
+	//Vector2 pos = Vector2(100, 100);
+	//Rigidbody* rb = new Rigidbody(pos, Vector2(0, 0), 0.f, 0.f, 0.f, 0.f, 0.f, 0.6f, 0.f);
+	//Object* object = new Object(rb, color, Vector2(100, 100));
+	//objects.push_back(object);
+
+	//RGB color2 = RGB(255, 255, 255, 255);
+	//Vector2 pos2 = Vector2(300, 100);
+	//Rigidbody* rb2 = new Rigidbody(pos2, Vector2(0, 0), 0.f, 0.f, 0.f, 0.f, 0.f, 0.6f, 0.f);
+	//Object* object2 = new Object(rb2, color2, Vector2(100, 100));
+	//objects.push_back(object2);
 	
 
  	while (!quit)
@@ -344,7 +522,7 @@ int main(int argc, char * argv[])
 				CreateObject(objects);
 			}
 		}
-		if (counter % 100 == 0)
+		if (counter % 50 == 0)
 		{
 			CreateObject(objects);
 		}
@@ -353,9 +531,16 @@ int main(int argc, char * argv[])
 		SDL_SetRenderDrawColor(pRenderer, 0, 0, 0, 255);
 		SDL_RenderClear(pRenderer);
 
-		UpdateObjects(objects);
+		CalculateForce(objects);
 		CollisionCheck(objects);
+		UpdateObjects(objects);
 		RemoveUnseen(objects);
+
+		for (auto& object : objects)
+		{
+			// REMEMBER TO SET FORCE TO ZERO AFTER APPLYING IT ON THIS UPDATE CYCLE
+			object->rb->force = Vector2(0.f, 0.f);
+		}
 
 		SDL_RenderPresent(pRenderer);
 		SDL_Delay(CONST_PHYSICS_DELAY);	

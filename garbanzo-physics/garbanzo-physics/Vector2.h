@@ -34,6 +34,14 @@ public:
 	{
 		return Vector2(this->x * other, this->y * other);
 	}
+	Vector2 operator/(const float &other) const
+	{
+		return Vector2(this->x / other, this->y / other);
+	}
+	Vector2 getNormal()
+	{
+		return Vector2(-this->y, this->x);
+	}
 };
 
 #endif

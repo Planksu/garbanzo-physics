@@ -36,6 +36,8 @@ void Object::UpdateRotation()
 	corners.push_back(box.topRight);
 	corners.push_back(box.bottomLeft);
 	corners.push_back(box.bottomRight);
+	corners.push_back(box.topNormal);
+	corners.push_back(box.leftNormal);
 
 	// Rotate all four corners
 	for (size_t i = 0; i < corners.size(); i++)
@@ -56,6 +58,8 @@ void Object::UpdateRotation()
 	box.topRight = corners[1];
 	box.bottomLeft = corners[2];
 	box.bottomRight = corners[3];
+	box.topNormal = corners[4];
+	box.leftNormal = corners[5];
 
 }
 
@@ -69,4 +73,6 @@ void Object::UpdateBoxPos()
 	box.bottomLeft.y = rb->position.y + box.size.y / 2;
 	box.bottomRight.x = rb->position.x + box.size.x / 2;
 	box.bottomRight.y = rb->position.y + box.size.y / 2;
+	box.topNormal = Vector2(rb->position.x, rb->position.y - box.size.y / 2);
+	box.leftNormal = Vector2(rb->position.x - box.size.x / 2, rb->position.y);
 }
