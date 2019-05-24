@@ -16,8 +16,8 @@
 #define RECT_MAX_SIZE 100
 #define RECT_MIN_X 0
 #define RECT_MAX_X WIDTH
-#define RECT_MIN_Y -10
-#define RECT_MAX_Y -150
+#define RECT_MIN_Y 10
+#define RECT_MAX_Y 150
 #define MASS_MIN 1
 #define MASS_MAX 15
 
@@ -99,14 +99,18 @@ bool CheckSatCollision(Object* first, Object* second)
 	Vector2 fourthAxis = second->rb->position - second->GetBox().leftNormal;
 
 	// By creating the "normals" like this, they both point inward into the object instead of outwards like normally
-	// This doesn't matter as long as both of the axis's are they same way
+	// This doesn't matter as long as both of the axis' are the same way
 	axis.push_back(Normalize(firstAxis));
 	axis.push_back(Normalize(secondAxis));
 	axis.push_back(Normalize(thirdAxis));
 	axis.push_back(Normalize(fourthAxis));
 
+	float minOverlap = std::numeric_limits<float>::infinity();
+
 	for (size_t i = 0; i < axis.size(); i++)
 	{
+		float overlap;
+
 		float aMin = std::numeric_limits<float>::infinity();
 		float aMax = -std::numeric_limits<float>::infinity();
 		float bMin = std::numeric_limits<float>::infinity();
@@ -133,8 +137,27 @@ bool CheckSatCollision(Object* first, Object* second)
 		if (bMin > aMax || bMax < aMin)
 		{
 			return false;
+			overlap = 0.f;
+		}
+		else // If this axis is not separating, take note of the overlap it has
+		{
+			overlap = std::min(aMax, bMax) - std::max(aMin, bMin);
 		}
 
+		if (overlap != 0.f && overlap < minOverlap)
+		{
+			minOverlap = overlap;
+
+			// Ideally this would be done only once
+			// But it's not a really expensive calculation
+			first->mtv = axis[i] * minOverlap;
+
+			// If center offset and overlap aren't pointing in the same direction, reverse mtv
+			if (DotProduct((first->rb->position - second->rb->position), first->mtv) > 0)
+			{
+				first->mtv = first->mtv * -1.f;
+			}
+		}
 	}
 	// If we've reached this point, no separating axis is found so a collision is happening
 	return true;
@@ -175,7 +198,8 @@ void ResolveCollision(Object* a, Object* b)
 
 	Vector2 r = Vector2(a->rb->position);
 	Vector2 p = r + Vector2(0, 1) * dx + Vector2(1, 0)*dy;
-	Vector2 normal = Normalize(b->rb->position - p);
+	//Vector2 normal = Normalize(b->rb->position - p);
+	Vector2 normal = Normalize(a->mtv);
 	float contactVel = DotProduct(ab, normal);
 
 	if (contactVel > 0)
@@ -184,7 +208,7 @@ void ResolveCollision(Object* a, Object* b)
 	SDL_SetRenderDrawColor(pRenderer, 0, 255, 255, 255);
 	Vector2 startPoint = a->rb->position;
 	Vector2 endPoint = startPoint + normal * 500;
-	SDL_RenderDrawLine(pRenderer, startPoint.x, startPoint.y, endPoint.x, endPoint.y);
+	//SDL_RenderDrawLine(pRenderer, startPoint.x, startPoint.y, endPoint.x, endPoint.y);
 
 	float e = fmin(a->rb->restitution, b->rb->restitution);
 	float j = -(1.0f + e) * contactVel;
@@ -196,8 +220,14 @@ void ResolveCollision(Object* a, Object* b)
 	
 	// Angular part
 	// Rough estimation of the "arm" vectors by getting vector from one object to another and dividing it by two
-	Vector2 bToA = (b->rb->position - a->rb->position) / 2;
-	Vector2 aToB = (a->rb->position - b->rb->position) / 2;
+	Vector2 bToA = Normalize(b->rb->position - a->rb->position);
+	bToA = bToA * sqrt(b->GetBox().size.x * b->GetBox().size.x + b->GetBox().size.y * b->GetBox().size.y);
+	bToA = b->rb->position - bToA;
+	bToA = bToA - b->rb->position;
+	Vector2 aToB = Normalize(a->rb->position - b->rb->position);
+	aToB = aToB * sqrt(a->GetBox().size.x * a->GetBox().size.x + a->GetBox().size.y * a->GetBox().size.y);
+	aToB = a->rb->position - aToB;
+	SDL_RenderDrawLine(pRenderer, a->rb->position.x, a->rb->position.y, aToB.x, aToB.y);
 	a->rb->torque = aToB.x * a->rb->force.y - aToB.y * a->rb->force.x;
 	b->rb->torque = bToA.x * b->rb->force.y - bToA.y * b->rb->force.x;
 	//std::cout << "Force of object a: " << a->rb->force.x << ", " << a->rb->force.y << std::endl;
@@ -252,7 +282,7 @@ void UpdateObjects(std::vector<Object*> &objects)
 			std::cout << "Objects position: " << object->rb->position.x << ", " << object->rb->position.y << std::endl;
 			std::cout << "Objects torque: " << object->rb->torque << std::endl;
 			std::cout << "Objects angularVelocity: " << object->rb->angularVelocity << std::endl;
-			std::cout << "Objects angle: " << object->rb->orientation << std::endl;
+			std::cout << "Objects angle: " << object->rb->orientation << "\n" << std::endl;
 #endif
 		}
 		else
@@ -278,22 +308,21 @@ void CreateObject(std::vector<Object*> &objects)
 	std::uniform_real_distribution<float> pos_dist_x(RECT_MIN_X, RECT_MAX_X);
 	std::uniform_real_distribution<float> mass_dist(MASS_MIN, MASS_MAX);
 	std::uniform_real_distribution<float> pos_dist_y(RECT_MIN_Y, RECT_MAX_Y);
-	std::uniform_int_distribution<int> color_1(0, 255);
-	std::uniform_int_distribution<int> color_2(0, 255);
-	std::uniform_int_distribution<int> color_3(0, 255);
+	std::uniform_int_distribution<int> color(0, 255);
 
 
 	// Get random values from the generator
 	int size_rand = size_dist(generator);
 	float pos_rand_x = pos_dist_x(generator);
 	float pos_rand_y = pos_dist_y(generator);
+	pos_rand_y = -pos_rand_y;
 	float mass_rand = mass_dist(generator);
-	int color_1_rand = color_1(generator);
-	int color_2_rand = color_2(generator);
-	int color_3_rand = color_3(generator);
+	int color_1_rand = color(generator);
+	int color_2_rand = color(generator);
+	int color_3_rand = color(generator);
 
 	// Set variables for the object
-	RGB color = RGB(color_1_rand, color_2_rand, color_3_rand, 255);
+	RGB objectColor = RGB(color_1_rand, color_2_rand, color_3_rand, 255);
 	Vector2 pos = Vector2(pos_rand_x, pos_rand_y);
 	Vector2 vel = Vector2(0, 0);
 	float accel = 0.f;
@@ -306,7 +335,7 @@ void CreateObject(std::vector<Object*> &objects)
 
 	// Create object
 	Rigidbody* rb = new Rigidbody(pos, vel, accel, orientation, angVel, torq, mass_rand, restitution, inertia, gravityScale);
-	Object* object = new Object(rb, color, Vector2(size_rand, size_rand));
+	Object* object = new Object(rb, objectColor, Vector2(size_rand, size_rand));
 	objects.push_back(object);
 }
 

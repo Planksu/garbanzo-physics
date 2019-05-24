@@ -35,6 +35,7 @@ public:
 	~Object();
 
 	Rigidbody* rb;
+	Vector2 mtv;
 
 	RGB GetColor() { return color; }
 	AABB GetBox() { return box; }
