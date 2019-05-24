@@ -10,7 +10,8 @@ Rigidbody::Rigidbody(	Vector2 pos,
 						float t,
 						float m,
 						float e,
-						float i)
+						float i,
+						float gs)
 {
 	position = pos;
 	velocity = vel;
@@ -21,6 +22,7 @@ Rigidbody::Rigidbody(	Vector2 pos,
 	mass = m;
 	restitution = e;
 	momentOfInertia = i;
+	gravityScale = gs;
 	force = Vector2(0, 0);
 }
 

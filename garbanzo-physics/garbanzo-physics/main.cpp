@@ -16,9 +16,10 @@
 #define RECT_MAX_SIZE 100
 #define RECT_MIN_X 0
 #define RECT_MAX_X WIDTH
-#define RECT_Y -10
+#define RECT_MIN_Y -10
+#define RECT_MAX_Y -150
 #define MASS_MIN 1
-#define MASS_MAX 5
+#define MASS_MAX 15
 
 #define G 9.81
 #define GRAVITY_SCALE 1
@@ -332,7 +333,7 @@ void CalculateForce(std::vector<Object*> &objects)
 		if (object->rb->mass > 0.f)
 		{
 			// Add the gravity vector to force
-			object->rb->force = object->rb->force + Vector2(0.f, G*GRAVITY_SCALE*object->rb->mass);
+			object->rb->force = object->rb->force + Vector2(0.f, G*object->rb->gravityScale*object->rb->mass);
 		}
 	}
 }
@@ -377,8 +378,9 @@ void CreateObject(std::vector<Object*> &objects)
 	std::random_device rd;
 	std::default_random_engine generator(rd());
 	std::uniform_int_distribution<int> size_dist(RECT_MIN_SIZE, RECT_MAX_SIZE);
-	std::uniform_real_distribution<float> pos_dist(RECT_MIN_X, RECT_MAX_X);
+	std::uniform_real_distribution<float> pos_dist_x(RECT_MIN_X, RECT_MAX_X);
 	std::uniform_real_distribution<float> mass_dist(MASS_MIN, MASS_MAX);
+	std::uniform_real_distribution<float> pos_dist_y(RECT_MIN_Y, RECT_MAX_Y);
 	std::uniform_int_distribution<int> color_1(0, 255);
 	std::uniform_int_distribution<int> color_2(0, 255);
 	std::uniform_int_distribution<int> color_3(0, 255);
@@ -386,14 +388,15 @@ void CreateObject(std::vector<Object*> &objects)
 
 	// Create object
 	int size_rand = size_dist(generator);
-	float pos_rand = pos_dist(generator);
+	float pos_rand_x = pos_dist_x(generator);
+	float pos_rand_y = pos_dist_y(generator);
 	float mass_rand = mass_dist(generator);
 	int color_1_rand = color_1(generator);
 	int color_2_rand = color_2(generator);
 	int color_3_rand = color_3(generator);
 
 	RGB color = RGB(color_1_rand, color_2_rand, color_3_rand, 255);
-	Vector2 pos = Vector2(pos_rand, RECT_Y);
+	Vector2 pos = Vector2(pos_rand_x, pos_rand_y);
 	Vector2 vel = Vector2(0, 0);
 	float accel = 0.f;
 	float orientation = 0.f;
@@ -401,8 +404,9 @@ void CreateObject(std::vector<Object*> &objects)
 	float torq = 0.f;
 	float restitution = 0.6f;
 	float inertia = 0.f;
+	float gravityScale = 0.001f;
 
-	Rigidbody* rb = new Rigidbody(pos, vel, accel, orientation, angVel, torq, mass_rand, restitution, inertia);
+	Rigidbody* rb = new Rigidbody(pos, vel, accel, orientation, angVel, torq, mass_rand, restitution, inertia, gravityScale);
 	Object* object = new Object(rb, color, Vector2(size_rand, size_rand));
 	objects.push_back(object);
 }
@@ -485,15 +489,15 @@ int main(int argc, char * argv[])
 	int counter = 0;
 
 	 //FLOOR
-	for (size_t i = 1; i < 27; i++)
-	{
-		RGB color = RGB(255, 255, 255, 255);
-		float widthChange = WIDTH / 25;
-		Vector2 pos = Vector2(widthChange * i - widthChange/2, HEIGHT - 250 + 250 / 2);
-		Rigidbody* rb = new Rigidbody(pos, Vector2(0, 0), 0.f, 0.f, 0.f, 0.f, 0.f, 0.6f, 0.f);
-		Object* object = new Object(rb, color, Vector2(widthChange, 250));
-		objects.push_back(object);
-	}
+	//for (size_t i = 1; i < 27; i++)
+	//{
+	//	RGB color = RGB(255, 255, 255, 255);
+	//	float widthChange = WIDTH / 25;
+	//	Vector2 pos = Vector2(widthChange * i - widthChange/2, HEIGHT - 250 + 250 / 2);
+	//	Rigidbody* rb = new Rigidbody(pos, Vector2(0, 0), 0.f, 0.f, 0.f, 0.f, 0.f, 0.6f, 0.f);
+	//	Object* object = new Object(rb, color, Vector2(widthChange, 250));
+	//	objects.push_back(object);
+	//}
 
 	//RGB color = RGB(255, 255, 255, 255);
 	//Vector2 pos = Vector2(100, 100);
@@ -506,6 +510,31 @@ int main(int argc, char * argv[])
 	//Rigidbody* rb2 = new Rigidbody(pos2, Vector2(0, 0), 0.f, 0.f, 0.f, 0.f, 0.f, 0.6f, 0.f);
 	//Object* object2 = new Object(rb2, color2, Vector2(100, 100));
 	//objects.push_back(object2);
+
+
+	RGB color = RGB(255, 255, 255, 255);
+	Vector2 pos = Vector2(750, 900);
+	Rigidbody* rb = new Rigidbody(pos, Vector2(0, 0), 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f);
+	Object* object = new Object(rb, color, Vector2(250, 250));
+	objects.push_back(object);
+
+	RGB color2 = RGB(255, 255, 255, 255);
+	Vector2 pos2 = Vector2(1250, 900);
+	Rigidbody* rb2 = new Rigidbody(pos2, Vector2(0, 0), 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f);
+	Object* object2 = new Object(rb2, color2, Vector2(250, 250));
+	objects.push_back(object2);
+
+	RGB color3 = RGB(255, 255, 255, 255);
+	Vector2 pos3 = Vector2(250, 900);
+	Rigidbody* rb3 = new Rigidbody(pos3, Vector2(0, 0), 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f);
+	Object* object3 = new Object(rb3, color3, Vector2(250, 250));
+	objects.push_back(object3);
+
+	RGB color4 = RGB(255, 255, 255, 255);
+	Vector2 pos4 = Vector2(1750, 900);
+	Rigidbody* rb4 = new Rigidbody(pos4, Vector2(0, 0), 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f);
+	Object* object4 = new Object(rb4, color4, Vector2(250, 250));
+	objects.push_back(object4);
 	
 
  	while (!quit)
@@ -536,11 +565,11 @@ int main(int argc, char * argv[])
 		UpdateObjects(objects);
 		RemoveUnseen(objects);
 
-		for (auto& object : objects)
-		{
-			// REMEMBER TO SET FORCE TO ZERO AFTER APPLYING IT ON THIS UPDATE CYCLE
-			object->rb->force = Vector2(0.f, 0.f);
-		}
+		//for (auto& object : objects)
+		//{
+		//	// REMEMBER TO SET FORCE TO ZERO AFTER APPLYING IT ON THIS UPDATE CYCLE
+		//	object->rb->force = Vector2(0.f, 0.f);
+		//}
 
 		SDL_RenderPresent(pRenderer);
 		SDL_Delay(CONST_PHYSICS_DELAY);	

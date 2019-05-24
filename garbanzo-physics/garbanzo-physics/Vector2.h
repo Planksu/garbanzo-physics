@@ -12,9 +12,6 @@ public:
 	Vector2();
 	~Vector2();
 
-	void SetX(float newX);
-	void SetY(float newY);
-
 	Vector2 operator-(const Vector2 &other) const
 	{
 		return Vector2(this->x - other.x, this->y - other.y);

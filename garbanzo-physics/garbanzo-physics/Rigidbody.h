@@ -18,11 +18,12 @@ public:
 
 	// General components
 	Vector2 force;
+	float gravityScale;
 	float mass;
 	float restitution;
 	float momentOfInertia;
 
-	Rigidbody(Vector2 pos, Vector2 vel, float a, float o, float angVel, float t, float m, float e, float i);
+	Rigidbody(Vector2 pos, Vector2 vel, float a, float o, float angVel, float t, float m, float e, float i, float gs);
 	~Rigidbody();
 
 
