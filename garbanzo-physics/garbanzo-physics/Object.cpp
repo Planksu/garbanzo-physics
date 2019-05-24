@@ -39,7 +39,7 @@ void Object::UpdateRotation()
 	corners.push_back(box.topNormal);
 	corners.push_back(box.leftNormal);
 
-	// Rotate all four corners
+	// Rotate all points
 	for (size_t i = 0; i < corners.size(); i++)
 	{
 		// Translate corner to origin

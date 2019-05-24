@@ -10,12 +10,17 @@
 // AABB struct using min as lower left corner and max as top right corner
 struct AABB
 {
+	// Corners
 	Vector2 topLeft;
 	Vector2 topRight;
 	Vector2 bottomLeft;
 	Vector2 bottomRight;
+
+	// Normal points
 	Vector2 topNormal;
 	Vector2 leftNormal;
+
+	// Size
 	Vector2 size;
 };
 
