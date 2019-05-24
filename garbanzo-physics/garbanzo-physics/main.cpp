@@ -153,6 +153,7 @@ bool CheckSatCollision(Object* first, Object* second)
 			first->mtv = axis[i] * minOverlap;
 
 			// If center offset and overlap aren't pointing in the same direction, reverse mtv
+			// Without this check the objects would be sucked into the middle instead of colliding away
 			if (DotProduct((first->rb->position - second->rb->position), first->mtv) > 0)
 			{
 				first->mtv = first->mtv * -1.f;
@@ -223,16 +224,15 @@ void ResolveCollision(Object* a, Object* b)
 	Vector2 bToA = Normalize(b->rb->position - a->rb->position);
 	bToA = bToA * sqrt(b->GetBox().size.x * b->GetBox().size.x + b->GetBox().size.y * b->GetBox().size.y);
 	bToA = b->rb->position - bToA;
-	bToA = bToA - b->rb->position;
 	Vector2 aToB = Normalize(a->rb->position - b->rb->position);
 	aToB = aToB * sqrt(a->GetBox().size.x * a->GetBox().size.x + a->GetBox().size.y * a->GetBox().size.y);
 	aToB = a->rb->position - aToB;
-	SDL_RenderDrawLine(pRenderer, a->rb->position.x, a->rb->position.y, aToB.x, aToB.y);
+
+	// Cross product to calculate the torque
 	a->rb->torque = aToB.x * a->rb->force.y - aToB.y * a->rb->force.x;
 	b->rb->torque = bToA.x * b->rb->force.y - bToA.y * b->rb->force.x;
 	//std::cout << "Force of object a: " << a->rb->force.x << ", " << a->rb->force.y << std::endl;
 	//std::cout << "Force of object b: " << b->rb->force.x << ", " << b->rb->force.y << std::endl;
-
 }
 #pragma endregion
 
@@ -270,8 +270,9 @@ void UpdateObjects(std::vector<Object*> &objects)
 			//object->rb->orientation += 0.015f;
 			object->rb->velocity = object->rb->velocity + object->rb->force * (1.0f / object->rb->mass + G) * dt;
 			object->rb->position = object->rb->position + object->rb->velocity * dt;
-			object->rb->angularVelocity += object->rb->torque / object->rb->momentOfInertia * dt;
-			object->rb->orientation += object->rb->angularVelocity * dt;
+			object->rb->angularAcceleration = object->rb->torque / object->rb->momentOfInertia;
+			object->rb->angularVelocity = object->rb->angularVelocity + object->rb->angularAcceleration * dt;
+			object->rb->orientation +=  object->rb->angularVelocity * dt;
 
 			object->UpdateBoxPos();
 			object->UpdateRotation();
@@ -328,13 +329,14 @@ void CreateObject(std::vector<Object*> &objects)
 	float accel = 0.f;
 	float orientation = 0.f;
 	float angVel = 0.f;
+	float angAccel = 0.f;
 	float torq = 0.f;
 	float restitution = 0.6f;
 	float inertia = 0.f;
 	float gravityScale = 0.001f;
 
 	// Create object
-	Rigidbody* rb = new Rigidbody(pos, vel, accel, orientation, angVel, torq, mass_rand, restitution, inertia, gravityScale);
+	Rigidbody* rb = new Rigidbody(pos, vel, accel, orientation, angVel, angAccel, torq, mass_rand, restitution, inertia, gravityScale);
 	Object* object = new Object(rb, objectColor, Vector2(size_rand, size_rand));
 	objects.push_back(object);
 }
@@ -421,7 +423,7 @@ int main(int argc, char * argv[])
 	{
 		RGB color = RGB(255, 255, 255, 255);
 		Vector2 pos = Vector2((500 * i)+250, 900);
-		Rigidbody* rb = new Rigidbody(pos, Vector2(0, 0), 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f);
+		Rigidbody* rb = new Rigidbody(pos, Vector2(0, 0), 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f);
 		Object* object = new Object(rb, color, Vector2(250, 250));
 		objects.push_back(object);
 	}

@@ -14,6 +14,7 @@ public:
 	// Angular components
 	float orientation;
 	float angularVelocity;
+	float angularAcceleration;
 	float torque;
 
 	// General components
@@ -23,7 +24,7 @@ public:
 	float restitution;
 	float momentOfInertia;
 
-	Rigidbody(Vector2 pos, Vector2 vel, float a, float o, float angVel, float t, float m, float e, float i, float gs);
+	Rigidbody(Vector2 pos, Vector2 vel, float a, float o, float angVel, float angAccl, float t, float m, float e, float i, float gs);
 	~Rigidbody();
 
 
