@@ -19,10 +19,11 @@
 #define RECT_MIN_Y 10
 #define RECT_MAX_Y 150
 #define MASS_MIN 10
-#define MASS_MAX 15
+#define MASS_MAX 30
 
 #define G 9.81
 #define GRAVITY_SCALE 1
+
 
 #define DEBUG
 //#define DEBUG_EXTENSIVE
@@ -329,7 +330,7 @@ void CreateObject(std::vector<Object*> &objects)
 	float torq = 0.f;
 	float restitution = 0.6f;
 	float inertia = 0.f;
-	float gravityScale = 0.001f;
+	float gravityScale = 0.0001f;
 
 	// Create object
 	Rigidbody* rb = new Rigidbody(pos, vel, accel, orientation, angVel, angAccel, torq, mass_rand, restitution, inertia, gravityScale);
@@ -418,7 +419,7 @@ int main(int argc, char * argv[])
 		RGB color = RGB(255, 255, 255, 255);
 		Vector2 pos = Vector2((500 * i)+250, 900);
 		Rigidbody* rb = new Rigidbody(pos, Vector2(0, 0), 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f);
-		Object* object = new Object(rb, color, Vector2(250, 250));
+		Object* object = new Object(rb, color, Vector2(200, 200));
 		objects.push_back(object);
 	}
 
@@ -438,8 +439,8 @@ int main(int argc, char * argv[])
 			}
 		}
 
-		// Automatically create a new object every 50 update cycles
-		if (counter % 100 == 0)
+		// Automatically create a new object every 200 update cycles
+		if (counter % 200 == 0)
 		{
 			CreateObject(objects);
 		}

@@ -65,14 +65,10 @@ void Object::UpdateRotation()
 
 void Object::UpdateBoxPos()
 {
-	box.topLeft.x = rb->position.x - box.size.x / 2;
-	box.topLeft.y = rb->position.y - box.size.y / 2;
-	box.topRight.x = rb->position.x + box.size.x / 2;
-	box.topRight.y = rb->position.y - box.size.y / 2;
-	box.bottomLeft.x = rb->position.x - box.size.x / 2;
-	box.bottomLeft.y = rb->position.y + box.size.y / 2;
-	box.bottomRight.x = rb->position.x + box.size.x / 2;
-	box.bottomRight.y = rb->position.y + box.size.y / 2;
-	box.topNormal = Vector2(rb->position.x, rb->position.y - box.size.y / 2);
-	box.leftNormal = Vector2(rb->position.x - box.size.x / 2, rb->position.y);
+	box.topLeft =		Vector2(rb->position.x - box.size.x / 2, rb->position.y - box.size.y / 2);
+	box.topRight =		Vector2(rb->position.x + box.size.x / 2, rb->position.y - box.size.y / 2);
+	box.bottomLeft =	Vector2(rb->position.x - box.size.x / 2, rb->position.y + box.size.y / 2);
+	box.bottomRight =	Vector2(rb->position.x + box.size.x / 2, rb->position.y + box.size.y / 2);
+	box.topNormal =		Vector2(rb->position.x, rb->position.y - box.size.y / 2);
+	box.leftNormal =	Vector2(rb->position.x - box.size.x / 2, rb->position.y);
 }

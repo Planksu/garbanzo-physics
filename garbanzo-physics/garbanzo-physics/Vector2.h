@@ -10,6 +10,7 @@ public:
 
 	Vector2(float xPos, float yPos);
 	Vector2();
+	float magnitude();
 	~Vector2();
 
 	Vector2 operator-(const Vector2 &other) const
@@ -39,6 +40,7 @@ public:
 	{
 		return Vector2(-this->y, this->x);
 	}
+	
 };
 
 #endif
