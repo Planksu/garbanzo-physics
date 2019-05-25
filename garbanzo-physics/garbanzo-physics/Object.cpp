@@ -31,7 +31,6 @@ void Object::UpdateRotation()
 
 	std::vector<Vector2> corners;
 
-
 	corners.push_back(box.topLeft);
 	corners.push_back(box.topRight);
 	corners.push_back(box.bottomLeft);
