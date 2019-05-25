@@ -17,6 +17,7 @@ struct AABB
 	Vector2 bottomRight;
 
 	// Normal points
+	// Basically, just the middle point of the top edge and the left edge
 	Vector2 topNormal;
 	Vector2 leftNormal;
 

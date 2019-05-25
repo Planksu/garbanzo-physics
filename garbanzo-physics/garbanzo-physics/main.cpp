@@ -18,7 +18,7 @@
 #define RECT_MAX_X WIDTH
 #define RECT_MIN_Y 10
 #define RECT_MAX_Y 150
-#define MASS_MIN 1
+#define MASS_MIN 10
 #define MASS_MAX 15
 
 #define G 9.81
@@ -79,7 +79,7 @@ bool CheckAABBCollision(Object* first, Object* second)
 bool CheckSatCollision(Object* first, Object* second)
 {
 	// Honestly, I wrote these this way because I was debugging the whole SAT thing for like 15 hours and
-	// I can't be bothered to write something else for it right now
+	// I can't be bothered to write something else for it
 	std::vector<Vector2> firstCorners;	
 	firstCorners.push_back(first->GetBox().topLeft);
 	firstCorners.push_back(first->GetBox().topRight);
@@ -92,6 +92,9 @@ bool CheckSatCollision(Object* first, Object* second)
 	secondCorners.push_back(second->GetBox().bottomRight);
 	secondCorners.push_back(second->GetBox().bottomLeft);
 
+	// In a SAT collision check, we need the four unique axis involved in a collision
+	// The four here are upwards and left of both colliding objects
+	// In addition, the normals will point inwards but as long as all of the normals point inwards it doesn't matter
 	std::vector<Vector2> axis;
 	Vector2 firstAxis = first->rb->position - first->GetBox().topNormal;
 	Vector2 secondAxis = first->rb->position - first->GetBox().leftNormal;
@@ -107,6 +110,8 @@ bool CheckSatCollision(Object* first, Object* second)
 
 	float minOverlap = std::numeric_limits<float>::infinity();
 
+	// Project every corner onto every axis
+	// If all projections overlap, a collision is happening
 	for (size_t i = 0; i < axis.size(); i++)
 	{
 		float overlap;
@@ -137,7 +142,6 @@ bool CheckSatCollision(Object* first, Object* second)
 		if (bMin > aMax || bMax < aMin)
 		{
 			return false;
-			overlap = 0.f;
 		}
 		else // If this axis is not separating, take note of the overlap it has
 		{
@@ -167,10 +171,11 @@ bool CheckSatCollision(Object* first, Object* second)
 void ResolveCollision(Object* a, Object* b)
 {
 	// Linear part
+
 	float aMass;
 	float bMass;
-
 	// Check if the mass is 0, if it is the mass is to be considered infinite
+	// If for some reason the mass is negative it will be considered infinite too
 	if (a->rb->mass > 0)
 		aMass = a->rb->mass;
 	else
@@ -183,34 +188,22 @@ void ResolveCollision(Object* a, Object* b)
 
 	// Get vector from one object to another
 	Vector2 ab = b->rb->velocity - a->rb->velocity;
-
-	float ex = (a->GetBox().size.x / 2);
-	float ey = (a->GetBox().size.y / 2);
-
-	float dx = DotProduct(ab, Vector2(0, 1));
-
-	if (dx > ex) dx = ex;
-	if (dx < -ex) dx = -ex;
-
-	float dy = DotProduct(ab, Vector2(1, 0));
-
-	if (dy > ey) dy = ey;
-	if (dy < -ey) dy = -ey;
-
-	Vector2 r = Vector2(a->rb->position);
-	Vector2 p = r + Vector2(0, 1) * dx + Vector2(1, 0)*dy;
-	//Vector2 normal = Normalize(b->rb->position - p);
+	// Collision normal is obtained from SAT collision check and the value is stored in the A-objects mtv-variable
 	Vector2 normal = Normalize(a->mtv);
-	float contactVel = DotProduct(ab, normal);
 
+	// Check if velocity will separate the objects next frame, no collision required then
+	float contactVel = DotProduct(ab, normal);
 	if (contactVel > 0)
 		return;
 
+#if defined DEBUG_EXTENSIVE
 	SDL_SetRenderDrawColor(pRenderer, 0, 255, 255, 255);
 	Vector2 startPoint = a->rb->position;
 	Vector2 endPoint = startPoint + normal * 500;
-	//SDL_RenderDrawLine(pRenderer, startPoint.x, startPoint.y, endPoint.x, endPoint.y);
+	SDL_RenderDrawLine(pRenderer, startPoint.x, startPoint.y, endPoint.x, endPoint.y);
+#endif
 
+	// Calculate impulse and velocity
 	float e = fmin(a->rb->restitution, b->rb->restitution);
 	float j = -(1.0f + e) * contactVel;
 	j /= 1 / aMass + 1 / bMass;
@@ -232,15 +225,16 @@ void ResolveCollision(Object* a, Object* b)
 	a->rb->torque = aArmVector.x * a->rb->force.y - aArmVector.y * a->rb->force.x;
 	b->rb->torque = bArmVector.x * b->rb->force.y - bArmVector.y * b->rb->force.x;
 
+	// Here we check if the torque applied should be positive or negative
+	// In this simulation, positive torque applies rotation clockwise, and negative counter-clockwise
 	if (aNormal.x < 0)
 		a->rb->torque = -a->rb->torque;
 	if (bNormal.x < 0)
 		b->rb->torque = -b->rb->torque;
-	//std::cout << "Force of object a: " << a->rb->force.x << ", " << a->rb->force.y << std::endl;
-	//std::cout << "Force of object b: " << b->rb->force.x << ", " << b->rb->force.y << std::endl;
 }
 #pragma endregion
 
+// This method just draws lines between the four corners of the object
 void DrawObject(Object* o)
 {
 	SDL_RenderDrawLine(pRenderer, o->GetBox().topLeft.x, o->GetBox().topLeft.y, o->GetBox().topRight.x, o->GetBox().topRight.y);
@@ -272,7 +266,6 @@ void UpdateObjects(std::vector<Object*> &objects)
 		{
 			// Timestep is constant in this simulation, but make a variable to make the code more readable
 			float dt = (CONST_PHYSICS_DELAY / 1000);
-			//object->rb->orientation += 0.015f;
 			object->rb->velocity = object->rb->velocity + object->rb->force * (1.0f / object->rb->mass + G) * dt;
 			object->rb->position = object->rb->position + object->rb->velocity * dt;
 			object->rb->angularAcceleration = object->rb->torque / object->rb->momentOfInertia;
@@ -419,9 +412,7 @@ int main(int argc, char * argv[])
 	SDL_Event e;
 	bool quit = false;
 
-	int counter = 0;
-
-	// Create the four static objects on our screen
+	// Create the four infinite mass objects on our screen
 	for (size_t i = 0; i < 4; i++)
 	{
 		RGB color = RGB(255, 255, 255, 255);
@@ -431,6 +422,7 @@ int main(int argc, char * argv[])
 		objects.push_back(object);
 	}
 
+	int counter = 0;
  	while (!quit)
 	{
 		while (SDL_PollEvent(&e))
