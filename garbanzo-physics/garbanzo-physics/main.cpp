@@ -221,16 +221,21 @@ void ResolveCollision(Object* a, Object* b)
 	
 	// Angular part
 	// Rough estimation of the "arm" vectors by getting vector from one object to another and dividing it by two
-	Vector2 bToA = Normalize(b->rb->position - a->rb->position);
-	bToA = bToA * sqrt(b->GetBox().size.x * b->GetBox().size.x + b->GetBox().size.y * b->GetBox().size.y);
-	bToA = b->rb->position - bToA;
-	Vector2 aToB = Normalize(a->rb->position - b->rb->position);
-	aToB = aToB * sqrt(a->GetBox().size.x * a->GetBox().size.x + a->GetBox().size.y * a->GetBox().size.y);
-	aToB = a->rb->position - aToB;
+	Vector2 bNormal = Normalize(b->rb->position - a->rb->position);
+	Vector2 bArmVector = bNormal * sqrt(b->GetBox().size.x * b->GetBox().size.x + b->GetBox().size.y * b->GetBox().size.y);
+	bArmVector = b->rb->position - bArmVector;
+	Vector2 aNormal = Normalize(a->rb->position - b->rb->position);
+	Vector2 aArmVector = aNormal * sqrt(a->GetBox().size.x * a->GetBox().size.x + a->GetBox().size.y * a->GetBox().size.y);
+	aArmVector = a->rb->position - aArmVector;
 
 	// Cross product to calculate the torque
-	a->rb->torque = aToB.x * a->rb->force.y - aToB.y * a->rb->force.x;
-	b->rb->torque = bToA.x * b->rb->force.y - bToA.y * b->rb->force.x;
+	a->rb->torque = aArmVector.x * a->rb->force.y - aArmVector.y * a->rb->force.x;
+	b->rb->torque = bArmVector.x * b->rb->force.y - bArmVector.y * b->rb->force.x;
+
+	if (aNormal.x < 0)
+		a->rb->torque = -a->rb->torque;
+	if (bNormal.x < 0)
+		b->rb->torque = -b->rb->torque;
 	//std::cout << "Force of object a: " << a->rb->force.x << ", " << a->rb->force.y << std::endl;
 	//std::cout << "Force of object b: " << b->rb->force.x << ", " << b->rb->force.y << std::endl;
 }
@@ -274,9 +279,6 @@ void UpdateObjects(std::vector<Object*> &objects)
 			object->rb->angularVelocity = object->rb->angularVelocity + object->rb->angularAcceleration * dt;
 			object->rb->orientation +=  object->rb->angularVelocity * dt;
 
-			object->UpdateBoxPos();
-			object->UpdateRotation();
-
 #if defined DEBUG_EXTENSIVE
 			std::cout << "Objects force: " << object->rb->force.x << ", " << object->rb->force.y << std::endl;
 			std::cout << "Objects velocity: " << object->rb->velocity.x << ", " << object->rb->velocity.y << std::endl;
@@ -286,13 +288,14 @@ void UpdateObjects(std::vector<Object*> &objects)
 			std::cout << "Objects angle: " << object->rb->orientation << "\n" << std::endl;
 #endif
 		}
-		else
+		else // This section applies to all objects that have infinite mass
 		{
-			object->rb->orientation += 0.008f;
-
-			object->UpdateBoxPos();
-			object->UpdateRotation();
+			// Make them rotate to the left constantly
+			object->rb->orientation -= 0.008f;
 		}
+		// Update position and rotation
+		object->UpdateBoxPos();
+		object->UpdateRotation();
 		// Draw the object
 		DrawObject(object);
 	}
